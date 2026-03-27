@@ -1,0 +1,14 @@
+{application, riak_admin_api,
+ [{description, "Riak admin API (/ctl), evolution of riak_control"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications,
+   [kernel,
+    stdlib,
+    webmachine
+   ]},
+  {env,[]},
+  {modules, []},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

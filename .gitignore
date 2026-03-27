@@ -1,0 +1,7 @@
+*.beam
+*.plt
+log
+logs
+_build
+rebar3.crashdump
+erl_crash.dump
