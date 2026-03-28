@@ -22,8 +22,6 @@
 -module(riak_admin_api_web).
 
 -export([dispatch_table/0]).
--include("riak_kv_wm_raw.hrl").
--include("riak_kv_types.hrl").
 
 dispatch_table() ->
     [{["ctl"], riak_admin_api_wm_ctl, []}].

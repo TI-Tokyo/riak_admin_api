@@ -26,7 +26,7 @@
 
 -behaviour(application).
 
--export([start/2]).
+-export([start/2, stop/1]).
 
 -include_lib("kernel/include/logger.hrl").
 
