@@ -45,7 +45,7 @@ init([]) ->
           {boolean(), #wm_reqdata{}, #context{}}.
 service_available(RD, Ctx) ->
     {riak_control_enabled(),
-     wrq:set_resp_headers(riak_kv_wm_utils:cors_headers(), RD), Ctx}.
+     wrq:set_resp_headers(cors_headers(), RD), Ctx}.
 
 riak_control_enabled() ->
     ?LOG_NOTICE("STUB: riak_control_enabled() returns true", []),
@@ -55,12 +55,12 @@ riak_control_enabled() ->
           {[atom()], #wm_reqdata{}, #context{}}.
 allowed_methods(RD, Ctx) ->
     {['OPTIONS', 'POST'],
-     wrq:set_resp_headers(riak_kv_wm_utils:cors_headers(), RD), Ctx}.
+     wrq:set_resp_headers(cors_headers(), RD), Ctx}.
 
 -spec options(#wm_reqdata{}, #context{}) ->
           {[{string(), string()}], #wm_reqdata{}, #context{}}.
 options(RD, Ctx) ->
-    {riak_kv_wm_utils:cors_headers(), RD, Ctx}.
+    {cors_headers(), RD, Ctx}.
 
 -spec is_authorized(#wm_reqdata{}, #context{}) ->
           {true, #wm_reqdata{}, #context{}}.
@@ -71,7 +71,7 @@ is_authorized(RD, Ctx) ->
     UserPermissions = get_user_permissions(User),
     ReqPermissions = permissions_for(Action),
     {intersect(UserPermissions, ReqPermissions),
-     wrq:set_resp_headers(riak_kv_wm_utils:cors_headers(), RD),
+     wrq:set_resp_headers(cors_headers(), RD),
      Ctx#context{request = Request, user = User}}.
 
 extract_user(RD) ->
@@ -124,6 +124,23 @@ process_post(RD, Ctx = #context{request = Request}) ->
                riak_kv_wm_json:encode(
                  #{error => <<"Malformed request">>}), RD), Ctx}
     end.
+
+
+cors_headers() ->
+    [ {"Access-Control-Allow-Origin", "*"}
+    , {"Access-Control-Allow-Credentials", "true"}
+    , {"Access-Control-Allow-Methods", "POST,OPTIONS"}
+    , {"Access-Control-Allow-Headers",
+       "host,"
+       "origin,"
+       "authorization,"
+       "content-type,"
+       "content-md5,"
+       "accept,"
+       "accept-encoding"
+      }
+    ].
+
 
 handler_mod(<<"ClusterGetStatus">>) -> riak_kv_wm_ctl_cluster;
 handler_mod(<<"ClusterClearPlan">>) -> riak_kv_wm_ctl_cluster;
