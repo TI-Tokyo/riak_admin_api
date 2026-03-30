@@ -2,9 +2,8 @@
 
 %% @doc /ctl endpoint kill switch.
 {mapping, "admin_api_enabled", "riak_admin_api.admin_api_enabled", [
-  {datatype, {flag, enabled, disabled}},
-  {default, disabled},
-  {commented, disabled}
+  {datatype, {flag, true, false}},
+  {default, false}
 ]}.
 
 %% @doc IP and port the admin API http server will bind.
@@ -21,3 +20,41 @@
      [IP || {_, IP} <- HTTPS]
  end
 }.
+
+
+%% @doc Enable monitoring requests on /ctl?
+{mapping, "security.monitoring", "riak_admin_api.sec_group.monitoring", [
+  {datatype, {flag, enabled, disabled}},
+  {default, enabled}
+]}.
+
+%% @doc Enable cluster admin requests on /ctl?
+{mapping, "security.admin", "riak_admin_api.sec_group.admin", [
+  {datatype, {flag, enabled, disabled}},
+  {default, disabled}
+]}.
+
+%% @doc Enable user/group management requests on /ctl?
+{mapping, "security.superuser", "riak_admin_api.sec_group.superuser", [
+  {datatype, {flag, enabled, disabled}},
+  {default, disabled}
+]}.
+
+
+%% @doc SSL site certificate to use for https.
+{mapping, "admin_api.certfile", "riak_admin_api.certfile", [
+  {datatype, file},
+  {default, "$(platform_etc_dir)/admin_api_cert.pem"}
+]}.
+
+%% @doc SSL key to use for https.
+{mapping, "admin_api.keyfile", "riak_admin_api.keyfile", [
+  {datatype, file},
+  {default, "$(platform_etc_dir)/admin_api_key.pem"}
+]}.
+
+%% @doc CA for the site certificate.
+{mapping, "admin_api.cacertfile", "riak_admin_api.cacertfile", [
+  {datatype, file},
+  {default, "$(platform_etc_dir)/cacertfile.pem"}
+]}.

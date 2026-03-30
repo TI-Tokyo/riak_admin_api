@@ -38,5 +38,6 @@ init([]) ->
     SupFlags = #{strategy => one_for_all,
                  intensity => 0,
                  period => 1},
-    ChildSpecs = [],
+    ChildSpecs = [#{id => riak_admin_api_ug,
+                    start => {riak_admin_api_ug, start_link, []}}],
     {ok, {SupFlags, ChildSpecs}}.
