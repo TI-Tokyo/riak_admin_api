@@ -34,10 +34,9 @@
 -spec start(application:start_type(), term()) ->
           {ok, pid()} | {error, supervisor:startlink_err()}.
 start(_Type, _) ->
-    case riak_admin_api_sup:start_link({local, ?MODULE}, ?MODULE, []) of
+    riak_core_util:start_app_deps(riak_admin_api),
+    case riak_admin_api_sup:start_link() of
         {ok, Pid} ->
-            ok = webmachine_router:add_route(
-                   riak_admin_api_web:dispatch_table()),
             {ok, Pid};
         {error, Reason} ->
             {error, Reason}

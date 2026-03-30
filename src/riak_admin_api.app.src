@@ -1,7 +1,7 @@
 {application, riak_admin_api,
  [{description, "Riak admin API (/ctl), evolution of riak_control"},
-  {vsn, "0.1.0"},
-  {registered, []},
+  {vsn, git},
+  {registered, [riak_admin_api_sup]},
   {applications,
    [kernel,
     stdlib,
@@ -9,6 +9,7 @@
    ]},
   {env,[]},
   {modules, []},
+  {mod, {riak_admin_api_app, []}},
   {licenses, ["Apache-2.0"]},
   {links, []}
  ]}.

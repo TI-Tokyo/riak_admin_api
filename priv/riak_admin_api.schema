@@ -39,22 +39,3 @@
   {datatype, {flag, enabled, disabled}},
   {default, disabled}
 ]}.
-
-
-%% @doc SSL site certificate to use for https.
-{mapping, "admin_api.certfile", "riak_admin_api.certfile", [
-  {datatype, file},
-  {default, "$(platform_etc_dir)/admin_api_cert.pem"}
-]}.
-
-%% @doc SSL key to use for https.
-{mapping, "admin_api.keyfile", "riak_admin_api.keyfile", [
-  {datatype, file},
-  {default, "$(platform_etc_dir)/admin_api_key.pem"}
-]}.
-
-%% @doc CA for the site certificate.
-{mapping, "admin_api.cacertfile", "riak_admin_api.cacertfile", [
-  {datatype, file},
-  {default, "$(platform_etc_dir)/cacertfile.pem"}
-]}.
