@@ -44,12 +44,9 @@ init([]) ->
 -spec service_available(#wm_reqdata{}, #context{}) ->
           {boolean(), #wm_reqdata{}, #context{}}.
 service_available(RD, Ctx) ->
-    {riak_control_enabled(),
+    {ok, Enabled} = application:get_env(riak_admin_api, admin_api_enabled),
+    {Enabled,
      wrq:set_resp_headers(cors_headers(), RD), Ctx}.
-
-riak_control_enabled() ->
-    ?LOG_NOTICE("STUB: riak_control_enabled() returns true", []),
-    true.
 
 -spec allowed_methods(#wm_reqdata{}, #context{}) ->
           {[atom()], #wm_reqdata{}, #context{}}.
