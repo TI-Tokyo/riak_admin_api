@@ -37,10 +37,9 @@ start_link() ->
 init([]) ->
     {ok, [{Ip, Port}]} = application:get_env(riak_admin_api, https),
     WMConfig =
-        [{name, spec_name(https, Ip, Port)},
+        [{name, riak_api_web:spec_name(https, Ip, Port)},
          {ip, Ip},
          {port, Port},
-         {dispatch, riak_admin_api_web:dispatch_table()},
          {log_dir, app_helper:get_env(riak_core, platform_log_dir, "log")},
          {ssl, true},
          {ssl_opts, riak_api_ssl:options()},
@@ -58,13 +57,3 @@ init([]) ->
            modules => [mochiweb_socket_server]}
         ],
     {ok, {SupFlags, ChildSpecs}}.
-
-
-spec_name(Scheme, Ip, Port) ->
-    FormattedIP = if is_tuple(Ip); tuple_size(Ip) == 4 ->
-                          inet_parse:ntoa(Ip);
-                     is_tuple(Ip); tuple_size(Ip) == 8 ->
-                          [$[, inet_parse:ntoa(Ip), $]];
-                     true -> Ip
-                  end,
-    lists:flatten(io_lib:format("~s://~s:~p", [Scheme, FormattedIP, Port])).
