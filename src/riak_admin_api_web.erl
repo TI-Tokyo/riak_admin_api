@@ -21,7 +21,102 @@
 %% -------------------------------------------------------------------
 -module(riak_admin_api_web).
 
--export([dispatch_table/0]).
+-export([cors_headers/0,
+         handler_mod/1,
+         permissions_for/1
+        ]).
 
-dispatch_table() ->
-    [{["ctl"], riak_admin_api_wm_ctl, []}].
+cors_headers() ->
+    [{"Access-Control-Allow-Origin", "*"},
+     {"Access-Control-Allow-Credentials", "true"},
+     {"Access-Control-Allow-Methods", "POST,OPTIONS"},
+     {"Access-Control-Allow-Headers",
+      "host,"
+      "origin,"
+      "authorization,"
+      "content-type,"
+      "content-md5,"
+      "accept,"
+      "accept-encoding"
+     }
+    ].
+
+
+handler_mod(<<"ClusterGetStatus">>) -> riak_admin_api_wm_ctl_cluster;
+handler_mod(<<"ClusterClearPlan">>) -> riak_admin_api_wm_ctl_cluster;
+handler_mod(<<"ClusterCommitPlan">>) -> riak_admin_api_wm_ctl_cluster;
+handler_mod(<<"ClusterStageJoin">>) -> riak_admin_api_wm_ctl_cluster;
+handler_mod(<<"ClusterStageLeave">>) -> riak_admin_api_wm_ctl_cluster;
+handler_mod(<<"ClusterStageRemove">>) -> riak_admin_api_wm_ctl_cluster;
+handler_mod(<<"ClusterStageReplace">>) -> riak_admin_api_wm_ctl_cluster;
+handler_mod(<<"ClusterStageForceReplace">>) -> riak_admin_api_wm_ctl_cluster;
+handler_mod(<<"ClusterDownNode">>) -> riak_admin_api_wm_ctl_cluster;
+handler_mod(<<"ClusterStopNode">>) -> riak_admin_api_wm_ctl_cluster;
+handler_mod(<<"NodeGetAppEnv">>) -> riak_admin_api_wm_ctl_cluster;
+handler_mod(<<"NodePutAppEnv">>) -> riak_admin_api_wm_ctl_cluster;
+handler_mod(<<"NodeGetAdvancedConfig">>) -> riak_admin_api_wm_ctl_cluster;
+handler_mod(<<"NodePutAdvancedConfig">>) -> riak_admin_api_wm_ctl_cluster;
+handler_mod(<<"NodeRestart">>) -> riak_admin_api_wm_ctl_cluster;
+
+handler_mod(<<"VnodeGetStatus">>) -> riak_admin_api_wm_ctl_vnode;
+handler_mod(<<"TictacaaeGetStatus">>) -> riak_admin_api_wm_ctl_tictacaae;
+
+handler_mod(<<"SystemGetVersionInfo">>) -> riak_admin_api_wm_ctl_version_info;
+
+handler_mod(<<"SecurityListUsers">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityCreateUser">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityUpdateUser">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityDeleteUser">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityListGroups">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityCreateGroup">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityUpdateGroup">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityDeleteGroup">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityAddUserGroup">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityDeleteUserGroup">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityAddUserGrant">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityDeleteUserGrant">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityAddGroupGrant">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityDeleteGroupGrant">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityListPermissions">>) -> riak_admin_api_wm_ctl_security;
+
+handler_mod(_) -> undefined.
+
+
+permissions_for(<<"ClusterGetStatus">>) -> [cluster_observer];
+permissions_for(<<"ClusterClearPlan">>) -> [cluster_observer, cluster_admin];
+permissions_for(<<"ClusterCommitPlan">>) -> [cluster_observer, cluster_admin];
+permissions_for(<<"ClusterStageJoin">>) -> [cluster_observer, cluster_admin];
+permissions_for(<<"ClusterStageLeave">>) -> [cluster_observer, cluster_admin];
+permissions_for(<<"ClusterStageRemove">>) -> [cluster_observer, cluster_admin];
+permissions_for(<<"ClusterStageReplace">>) -> [cluster_observer, cluster_admin];
+permissions_for(<<"ClusterStageForceReplace">>) -> [cluster_observer, cluster_admin];
+permissions_for(<<"ClusterDownNode">>) -> [cluster_observer, cluster_admin];
+permissions_for(<<"ClusterStopNode">>) -> [cluster_observer, cluster_admin];
+permissions_for(<<"NodeGetAppEnv">>) -> [cluster_observer, cluster_admin];
+permissions_for(<<"NodePutAppEnv">>) -> [cluster_observer, cluster_admin];
+permissions_for(<<"NodeGetAdvancedConfig">>) -> [cluster_observer, cluster_admin];
+permissions_for(<<"NodePutAdvancedConfig">>) -> [cluster_observer, cluster_admin];
+permissions_for(<<"NodeRestart">>) -> [cluster_observer, cluster_admin];
+
+permissions_for(<<"VnodeGetStatus">>) -> [cluster_observer];
+permissions_for(<<"TictacaaeGetStatus">>) -> [cluster_observer];
+
+permissions_for(<<"SystemGetVersionInfo">>) -> [];
+
+permissions_for(<<"SecurityListUsers">>) -> [security];
+permissions_for(<<"SecurityCreateUser">>) -> [security];
+permissions_for(<<"SecurityUpdateUser">>) -> [security];
+permissions_for(<<"SecurityDeleteUser">>) -> [security];
+permissions_for(<<"SecurityListGroups">>) -> [security];
+permissions_for(<<"SecurityCreateGroup">>) -> [security];
+permissions_for(<<"SecurityUpdateGroup">>) -> [security];
+permissions_for(<<"SecurityDeleteGroup">>) -> [security];
+permissions_for(<<"SecurityAddUserGroup">>) -> [security];
+permissions_for(<<"SecurityDeleteUserGroup">>) -> [security];
+permissions_for(<<"SecurityAddUserGrant">>) -> [security];
+permissions_for(<<"SecurityDeleteUserGrant">>) -> [security];
+permissions_for(<<"SecurityAddGroupGrant">>) -> [security];
+permissions_for(<<"SecurityDeleteGroupGrant">>) -> [security];
+permissions_for(<<"SecurityListPermissions">>) -> [security];
+
+permissions_for(_) -> [].

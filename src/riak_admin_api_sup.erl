@@ -46,9 +46,9 @@ init([]) ->
          {nodelay, true}
         ],
     SupFlags =
-        #{strategy => one_for_all,
-          intensity => 0,
-          period => 1},
+        #{strategy => one_for_one,
+          intensity => 10,
+          period => 10},
     ChildSpecs =
         [#{id => riak_admin_api_ug,
            start => {riak_admin_api_ug, start_link, []}},

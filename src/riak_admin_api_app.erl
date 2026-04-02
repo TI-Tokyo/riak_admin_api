@@ -35,13 +35,10 @@
           {ok, pid()} | {error, supervisor:startlink_err()}.
 start(_Type, _) ->
     riak_core_util:start_app_deps(riak_admin_api),
-
-    {ok, [{Ip, Port}]} = application:get_env(riak_admin_api, https),
     case riak_admin_api_sup:start_link() of
         {ok, Pid} ->
             ok = webmachine_router:add_route(
-                   riak_api_web:spec_name(https, Ip, Port),
-                   riak_admin_api_web:dispatch_table()),
+                   {["ctl"], riak_admin_api_wm_ctl, []}),
             {ok, Pid};
         {error, Reason} ->
             {error, Reason}

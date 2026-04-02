@@ -46,18 +46,18 @@ init([]) ->
 service_available(RD, Ctx) ->
     {ok, Enabled} = application:get_env(riak_admin_api, admin_api_enabled),
     {Enabled,
-     wrq:set_resp_headers(cors_headers(), RD), Ctx}.
+     wrq:set_resp_headers(riak_admin_api_web:cors_headers(), RD), Ctx}.
 
 -spec allowed_methods(#wm_reqdata{}, #context{}) ->
           {[atom()], #wm_reqdata{}, #context{}}.
 allowed_methods(RD, Ctx) ->
     {['OPTIONS', 'POST'],
-     wrq:set_resp_headers(cors_headers(), RD), Ctx}.
+     wrq:set_resp_headers(riak_admin_api_web:cors_headers(), RD), Ctx}.
 
 -spec options(#wm_reqdata{}, #context{}) ->
           {[{string(), string()}], #wm_reqdata{}, #context{}}.
 options(RD, Ctx) ->
-    {cors_headers(), RD, Ctx}.
+    {riak_admin_api_web:cors_headers(), RD, Ctx}.
 
 -spec is_authorized(#wm_reqdata{}, #context{}) ->
           {true, #wm_reqdata{}, #context{}}.
@@ -66,9 +66,9 @@ is_authorized(RD, Ctx) ->
         riak_kv_wm_json:decode(wrq:req_body(RD)),
     User = extract_user(RD),
     UserPermissions = get_user_permissions(User),
-    ReqPermissions = permissions_for(Action),
+    ReqPermissions = riak_admin_api_web:permissions_for(Action),
     {intersect(UserPermissions, ReqPermissions),
-     wrq:set_resp_headers(cors_headers(), RD),
+     wrq:set_resp_headers(riak_admin_api_web:cors_headers(), RD),
      Ctx#context{request = Request, user = User}}.
 
 extract_user(RD) ->
@@ -96,7 +96,7 @@ content_types_accepted(RD, Ctx) ->
 process_post(RD, Ctx = #context{request = Request}) ->
     #{<<"action">> := Action} = Request,
     try
-        case handler_mod(Action) of
+        case riak_admin_api_web:handler_mod(Action) of
             undefined ->
                 {{halt, 400},
                  wrq:append_to_resp_body(
@@ -121,99 +121,3 @@ process_post(RD, Ctx = #context{request = Request}) ->
                riak_kv_wm_json:encode(
                  #{error => <<"Malformed request">>}), RD), Ctx}
     end.
-
-
-cors_headers() ->
-    [ {"Access-Control-Allow-Origin", "*"}
-    , {"Access-Control-Allow-Credentials", "true"}
-    , {"Access-Control-Allow-Methods", "POST,OPTIONS"}
-    , {"Access-Control-Allow-Headers",
-       "host,"
-       "origin,"
-       "authorization,"
-       "content-type,"
-       "content-md5,"
-       "accept,"
-       "accept-encoding"
-      }
-    ].
-
-
-handler_mod(<<"ClusterGetStatus">>) -> riak_kv_wm_ctl_cluster;
-handler_mod(<<"ClusterClearPlan">>) -> riak_kv_wm_ctl_cluster;
-handler_mod(<<"ClusterCommitPlan">>) -> riak_kv_wm_ctl_cluster;
-handler_mod(<<"ClusterStageJoin">>) -> riak_kv_wm_ctl_cluster;
-handler_mod(<<"ClusterStageLeave">>) -> riak_kv_wm_ctl_cluster;
-handler_mod(<<"ClusterStageRemove">>) -> riak_kv_wm_ctl_cluster;
-handler_mod(<<"ClusterStageReplace">>) -> riak_kv_wm_ctl_cluster;
-handler_mod(<<"ClusterStageForceReplace">>) -> riak_kv_wm_ctl_cluster;
-handler_mod(<<"ClusterDownNode">>) -> riak_kv_wm_ctl_cluster;
-handler_mod(<<"ClusterStopNode">>) -> riak_kv_wm_ctl_cluster;
-handler_mod(<<"NodeGetAppEnv">>) -> riak_kv_wm_ctl_cluster;
-handler_mod(<<"NodePutAppEnv">>) -> riak_kv_wm_ctl_cluster;
-handler_mod(<<"NodeGetAdvancedConfig">>) -> riak_kv_wm_ctl_cluster;
-handler_mod(<<"NodePutAdvancedConfig">>) -> riak_kv_wm_ctl_cluster;
-handler_mod(<<"NodeRestart">>) -> riak_kv_wm_ctl_cluster;
-
-handler_mod(<<"VnodeGetStatus">>) -> riak_kv_wm_ctl_vnode;
-handler_mod(<<"TictacaaeGetStatus">>) -> riak_kv_wm_ctl_tictacaae;
-
-handler_mod(<<"SystemGetVersionInfo">>) -> riak_kv_wm_ctl_version_info;
-
-handler_mod(<<"SecurityListUsers">>) -> riak_kv_wm_ctl_security;
-handler_mod(<<"SecurityCreateUser">>) -> riak_kv_wm_ctl_security;
-handler_mod(<<"SecurityUpdateUser">>) -> riak_kv_wm_ctl_security;
-handler_mod(<<"SecurityDeleteUser">>) -> riak_kv_wm_ctl_security;
-handler_mod(<<"SecurityListGroups">>) -> riak_kv_wm_ctl_security;
-handler_mod(<<"SecurityCreateGroup">>) -> riak_kv_wm_ctl_security;
-handler_mod(<<"SecurityUpdateGroup">>) -> riak_kv_wm_ctl_security;
-handler_mod(<<"SecurityDeleteGroup">>) -> riak_kv_wm_ctl_security;
-handler_mod(<<"SecurityAddUserGroup">>) -> riak_kv_wm_ctl_security;
-handler_mod(<<"SecurityDeleteUserGroup">>) -> riak_kv_wm_ctl_security;
-handler_mod(<<"SecurityAddUserGrant">>) -> riak_kv_wm_ctl_security;
-handler_mod(<<"SecurityDeleteUserGrant">>) -> riak_kv_wm_ctl_security;
-handler_mod(<<"SecurityAddGroupGrant">>) -> riak_kv_wm_ctl_security;
-handler_mod(<<"SecurityDeleteGroupGrant">>) -> riak_kv_wm_ctl_security;
-handler_mod(<<"SecurityListPermissions">>) -> riak_kv_wm_ctl_security;
-
-handler_mod(_) -> undefined.
-
-
-permissions_for(<<"ClusterGetStatus">>) -> [cluster_observer];
-permissions_for(<<"ClusterClearPlan">>) -> [cluster_observer, cluster_admin];
-permissions_for(<<"ClusterCommitPlan">>) -> [cluster_observer, cluster_admin];
-permissions_for(<<"ClusterStageJoin">>) -> [cluster_observer, cluster_admin];
-permissions_for(<<"ClusterStageLeave">>) -> [cluster_observer, cluster_admin];
-permissions_for(<<"ClusterStageRemove">>) -> [cluster_observer, cluster_admin];
-permissions_for(<<"ClusterStageReplace">>) -> [cluster_observer, cluster_admin];
-permissions_for(<<"ClusterStageForceReplace">>) -> [cluster_observer, cluster_admin];
-permissions_for(<<"ClusterDownNode">>) -> [cluster_observer, cluster_admin];
-permissions_for(<<"ClusterStopNode">>) -> [cluster_observer, cluster_admin];
-permissions_for(<<"NodeGetAppEnv">>) -> [cluster_observer, cluster_admin];
-permissions_for(<<"NodePutAppEnv">>) -> [cluster_observer, cluster_admin];
-permissions_for(<<"NodeGetAdvancedConfig">>) -> [cluster_observer, cluster_admin];
-permissions_for(<<"NodePutAdvancedConfig">>) -> [cluster_observer, cluster_admin];
-permissions_for(<<"NodeRestart">>) -> [cluster_observer, cluster_admin];
-
-permissions_for(<<"VnodeGetStatus">>) -> [cluster_observer];
-permissions_for(<<"TictacaaeGetStatus">>) -> [cluster_observer];
-
-permissions_for(<<"SystemGetVersionInfo">>) -> [];
-
-permissions_for(<<"SecurityListUsers">>) -> [security];
-permissions_for(<<"SecurityCreateUser">>) -> [security];
-permissions_for(<<"SecurityUpdateUser">>) -> [security];
-permissions_for(<<"SecurityDeleteUser">>) -> [security];
-permissions_for(<<"SecurityListGroups">>) -> [security];
-permissions_for(<<"SecurityCreateGroup">>) -> [security];
-permissions_for(<<"SecurityUpdateGroup">>) -> [security];
-permissions_for(<<"SecurityDeleteGroup">>) -> [security];
-permissions_for(<<"SecurityAddUserGroup">>) -> [security];
-permissions_for(<<"SecurityDeleteUserGroup">>) -> [security];
-permissions_for(<<"SecurityAddUserGrant">>) -> [security];
-permissions_for(<<"SecurityDeleteUserGrant">>) -> [security];
-permissions_for(<<"SecurityAddGroupGrant">>) -> [security];
-permissions_for(<<"SecurityDeleteGroupGrant">>) -> [security];
-permissions_for(<<"SecurityListPermissions">>) -> [security];
-
-permissions_for(_) -> [].
