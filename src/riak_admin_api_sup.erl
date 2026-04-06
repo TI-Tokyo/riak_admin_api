@@ -35,25 +35,30 @@ start_link() ->
 
 -spec init([]) -> {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}} | ignore.
 init([]) ->
-    {ok, [{Ip, Port}]} = application:get_env(riak_admin_api, https),
-    WMConfig =
-        [{name, riak_api_web:spec_name(https, Ip, Port)},
-         {ip, Ip},
-         {port, Port},
-         {log_dir, app_helper:get_env(riak_core, platform_log_dir, "log")},
-         {ssl, true},
-         {ssl_opts, riak_api_ssl:options()},
-         {nodelay, true}
-        ],
     SupFlags =
         #{strategy => one_for_one,
           intensity => 10,
           period => 10},
-    ChildSpecs =
-        [#{id => riak_admin_api_ug,
-           start => {riak_admin_api_ug, start_link, []}},
-         #{id => riak_admin_api_web,
-           start => {webmachine_mochiweb, start, [WMConfig]},
-           modules => [mochiweb_socket_server]}
-        ],
-    {ok, {SupFlags, ChildSpecs}}.
+    case application:get_key(riak_admin_api, admin_api_enabled) of
+        true ->
+            {ok, [{Ip, Port}]} = application:get_env(riak_admin_api, https),
+            WMConfig =
+                [{name, riak_api_web:spec_name(https, Ip, Port)},
+                 {ip, Ip},
+                 {port, Port},
+                 {log_dir, app_helper:get_env(riak_core, platform_log_dir, "log")},
+                 {ssl, true},
+                 {ssl_opts, riak_api_ssl:options()},
+                 {nodelay, true}
+                ],
+            ChildSpecs =
+                [#{id => riak_admin_api_ug,
+                   start => {riak_admin_api_ug, start_link, []}},
+                 #{id => riak_admin_api_web,
+                   start => {webmachine_mochiweb, start, [WMConfig]},
+                   modules => [mochiweb_socket_server]}
+                ],
+            {ok, {SupFlags, ChildSpecs}};
+        _ ->
+            {ok, {SupFlags, []}}
+    end.

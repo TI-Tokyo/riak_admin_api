@@ -37,8 +37,13 @@ start(_Type, _) ->
     riak_core_util:start_app_deps(riak_admin_api),
     case riak_admin_api_sup:start_link() of
         {ok, Pid} ->
-            ok = webmachine_router:add_route(
-                   {["ctl"], riak_admin_api_wm_ctl, []}),
+            case application:get_env(riak_admin_api, admin_api_enabled, false) of
+                true ->
+                    ok = webmachine_router:add_route(
+                           {["ctl"], riak_admin_api_wm_ctl, []});
+                false ->
+                    ok
+            end,
             {ok, Pid};
         {error, Reason} ->
             {error, Reason}
