@@ -1,7 +1,7 @@
 %% -------------------------------------------------------------------
 %%
 %% riak_admin_api_wm_ctl_security: Riak Control, requests
-%%                                 to manage users, groups, grants.
+%%                                 to manage users, groups and permissions.
 %%
 %% Copyright (c) 2026 TI Tokyo.  All Rights Reserved.
 %%
@@ -33,24 +33,16 @@ process_request(Request) ->
     Res =
         case Request of
             #{<<"action">> := <<"SecurityListUsers">>} ->
-                A = [ begin
-                          PasswordOptions = proplists:get_value("password", Options, []),
-                          PwdHash = proplists:get_value(hash_pass, PasswordOptions, <<"--">>),
-                          Groups = proplists:get_value("groups", Options, []),
-                          OtherOptions = maps:from_list([{unicode:characters_to_binary(K, utf8),
-                                                          unicode:characters_to_binary(V, utf8)}
-                                                         || {K, V} <- Options,
-                                                            K /= "password",
-                                                            K /= "groups"]),
-                          Grants = [#{scope => jsonify_scope(Scope),
-                                      permissions => jsonify_permissions(PP)}
-                                    || {Scope, PP} <- riak_core_security:get_user_grants(Name)],
-                          #{name => Name,
-                            password_hash => PwdHash,
-                            groups => Groups,
-                            options => OtherOptions,
-                            grants => Grants}
-                      end || {Name, [Options]} <- riak_core_security:get_users() ],
+                A = [ #{name => Name,
+                        groups => Groups,
+                        auth_method => AuthMethod,
+                        permissions => Permissions}
+                      || {Name, ?USER#{groups = Groups,
+                                           created = Created,
+                                           expires = Expires,
+                                           permissions = Permissions,
+                                           auth_details = #{auth_method := AuthMethod}}}
+                             <- riak_admin_api_ug:list_users() ],
                 {ok, A};
             #{<<"action">> := <<"SecurityCreateUser">>,
               <<"params">> := #{<<"name">> := Name,
@@ -193,16 +185,6 @@ process_request(Request) ->
             {404, <<"No such user or group">>}
     end.
 
-
-jsonify_scope({A}) ->
-    list_to_binary(A);
-jsonify_scope({A, any}) ->
-    iolist_to_binary([A, $:, $*]);
-jsonify_scope({A, B}) ->
-    iolist_to_binary([A, $:, B]).
-
-jsonify_permissions(PP) ->
-    [list_to_binary(P) || P <- PP].
 
 deep_binary_to_list(A) ->
     maps:fold(

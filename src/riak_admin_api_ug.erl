@@ -22,50 +22,87 @@
 
 -module(riak_admin_api_ug).
 
--behaviour(gen_server).
-
+-include("riak_admin_api.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--export([start_link/0, stop/1]).
-
--export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-         terminate/2, code_change/3]).
-
--spec start_link() -> {ok, pid()} | ignore | {error, term()}.
-start_link() ->
-    gen_server:start_link(?MODULE, [], []).
-
--spec stop(pid()) -> ok.
-stop(Pid) ->
-    gen_server:call(Pid, stop, infinity).
-
-
--record(state, { users = [] :: list()
-               , groups = [] :: list()
-               }).
-
-init([]) ->
-    process_flag(trap_exit, true),
-    {ok, #state{}}.
-
--spec handle_call(term(), {pid(), term()}, #state{}) ->
-          {stop, normal, ok, #state{}}.
-handle_call(stop, _From, State) ->
-    {stop, normal, ok, State}.
-
--spec handle_cast(term(), #state{}) -> {noreply, #state{}}.
-handle_cast(_Msg, State) ->
-    {noreply, State}.
+-export([get_user/1,
+         add_user/2,
+         del_user/1,
+         list_users/0,
+         get_group/1,
+         add_group/2,
+         del_group/1,
+         list_groups/0,
+         add_user_group/2,
+         del_user_group/2,
+         add_user_permission/2,
+         del_user_permission/2,
+         add_group_permission/2,
+         del_group_permission/2
+        ]).
 
 
--spec handle_info(term(), #state{}) -> {noreply, #state{}}.
-handle_info(_Info, State) ->
-    {noreply, State}.
+-define(TOMBSTONE, '$deleted').  %% must match value defined in riak_core_metadata.erl
 
--spec terminate(term(), #state{}) -> ok.
-terminate(_Reason, #state{}) ->
-    ok.
+-spec get_user(id()) -> {ok, user()} | {error, notfound}.
+get_user(Name) ->
+    case riak_core_metadata:get({?CORE_MD_PREFIX, <<"u">>}, Name) of
+        undefined ->
+            {error, notfound};
+        Defined ->
+            {ok, Defined}
+    end.
 
--spec code_change(term(), #state{}, term()) -> {ok, #state{}}.
-code_change(_OldVsn, State, _Extra) ->
-    {ok, State}.
+-spec add_user(id(), user()) -> ok.
+add_user(Name, Record) ->
+    riak_core_metadata:put({?CORE_MD_PREFIX, <<"u">>}, Name, Record, []).
+
+-spec del_user(id()) -> ok | {error, notfound}.
+del_user(Name) ->
+    case get_user(Name) of
+        undefined ->
+            {error, notfound};
+        _ ->
+            riak_core_metadata:delete({?CORE_MD_PREFIX, <<"u">>}, Name)
+    end.
+
+-spec list_users() -> [user()].
+list_users() ->
+    riak_core_metadata:fold(
+      fun({_, [?TOMBSTONE]}, Acc) ->
+              Acc;
+         ({Name, A}, Acc) ->
+              [{Name, A} | Acc]
+      end,
+      [], {?ADMIN_MD_PREFIX, <<"u">>}
+     ).
+
+
+-spec get_group(id()) -> {ok, group()} | {error, notfound}.
+get_group(Name) ->
+    riak_core_metadata:get({?CORE_MD_PREFIX, <<"g">>}, Name).
+
+-spec add_group(id(), group()) -> ok.
+add_group(Name, Record) ->
+    riak_core_metadata:put({?CORE_MD_PREFIX, <<"g">>}, Name, Record, []).
+
+-spec del_group(id()) -> ok | {error, notfound}.
+del_group(Name) ->
+    case get_group(Name) of
+        undefined ->
+            {error, notfound};
+        _ ->
+            riak_core_metadata:delete({?CORE_MD_PREFIX, <<"g">>}, Name)
+    end.
+
+-spec list_groups() -> [group()].
+list_groups() ->
+    riak_core_metadata:fold(
+      fun({_, [?TOMBSTONE]}, Acc) ->
+              Acc;
+         ({Name, A}, Acc) ->
+              [{Name, A} | Acc]
+      end,
+      [], {?ADMIN_MD_PREFIX, <<"g">>}
+     ).
+
