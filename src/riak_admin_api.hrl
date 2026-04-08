@@ -31,7 +31,7 @@
 -record(user_v1, {groups :: [id()],
                   created :: ts(),
                   modified :: ts(),
-                  expires :: ts(),
+                  expires :: never | ts(),
                   permissions :: [permission()],
                   auth_details :: #{method := auth_method(),
                                     details := map()}
@@ -40,10 +40,11 @@
 -define(USER, #user_v1).
 
 -record(group_v1, {created :: ts(),
+                   modified :: ts(),
                    permissions :: [permission()]
                   }).
 -type group() :: #group_v1{}.
--define(USER, #group_v1).
+-define(GROUP, #group_v1).
 
 -define(ADMIN_MD_PREFIX, <<"admin_api">>).
 

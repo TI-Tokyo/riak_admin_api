@@ -65,18 +65,17 @@ handler_mod(<<"SystemGetVersionInfo">>) -> riak_admin_api_wm_ctl_version_info;
 
 handler_mod(<<"SecurityListUsers">>) -> riak_admin_api_wm_ctl_security;
 handler_mod(<<"SecurityCreateUser">>) -> riak_admin_api_wm_ctl_security;
-handler_mod(<<"SecurityUpdateUser">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecuritySetUserExpiry">>) -> riak_admin_api_wm_ctl_security;
 handler_mod(<<"SecurityDeleteUser">>) -> riak_admin_api_wm_ctl_security;
 handler_mod(<<"SecurityListGroups">>) -> riak_admin_api_wm_ctl_security;
 handler_mod(<<"SecurityCreateGroup">>) -> riak_admin_api_wm_ctl_security;
-handler_mod(<<"SecurityUpdateGroup">>) -> riak_admin_api_wm_ctl_security;
 handler_mod(<<"SecurityDeleteGroup">>) -> riak_admin_api_wm_ctl_security;
-handler_mod(<<"SecurityAddUserGroup">>) -> riak_admin_api_wm_ctl_security;
-handler_mod(<<"SecurityDeleteUserGroup">>) -> riak_admin_api_wm_ctl_security;
-handler_mod(<<"SecurityAddUserGrant">>) -> riak_admin_api_wm_ctl_security;
-handler_mod(<<"SecurityDeleteUserGrant">>) -> riak_admin_api_wm_ctl_security;
-handler_mod(<<"SecurityAddGroupGrant">>) -> riak_admin_api_wm_ctl_security;
-handler_mod(<<"SecurityDeleteGroupGrant">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityAddUserGroups">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityDeleteUserGroups">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityAddUserPermissions">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityDeleteUserPermissions">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityAddGroupPermissions">>) -> riak_admin_api_wm_ctl_security;
+handler_mod(<<"SecurityDeleteGroupPermissions">>) -> riak_admin_api_wm_ctl_security;
 handler_mod(<<"SecurityListPermissions">>) -> riak_admin_api_wm_ctl_security;
 
 handler_mod(_) -> undefined.
@@ -105,18 +104,17 @@ permissions_for(<<"SystemGetVersionInfo">>) -> [];
 
 permissions_for(<<"SecurityListUsers">>) -> [security];
 permissions_for(<<"SecurityCreateUser">>) -> [security];
-permissions_for(<<"SecurityUpdateUser">>) -> [security];
+permissions_for(<<"SecuritySetUserExpiry">>) -> [security];
 permissions_for(<<"SecurityDeleteUser">>) -> [security];
 permissions_for(<<"SecurityListGroups">>) -> [security];
 permissions_for(<<"SecurityCreateGroup">>) -> [security];
-permissions_for(<<"SecurityUpdateGroup">>) -> [security];
 permissions_for(<<"SecurityDeleteGroup">>) -> [security];
-permissions_for(<<"SecurityAddUserGroup">>) -> [security];
-permissions_for(<<"SecurityDeleteUserGroup">>) -> [security];
-permissions_for(<<"SecurityAddUserGrant">>) -> [security];
-permissions_for(<<"SecurityDeleteUserGrant">>) -> [security];
-permissions_for(<<"SecurityAddGroupGrant">>) -> [security];
-permissions_for(<<"SecurityDeleteGroupGrant">>) -> [security];
+permissions_for(<<"SecurityAddUserGroups">>) -> [security];
+permissions_for(<<"SecurityDeleteUserGroups">>) -> [security];
+permissions_for(<<"SecurityAddUserPermissions">>) -> [security];
+permissions_for(<<"SecurityDeleteUserPermissions">>) -> [security];
+permissions_for(<<"SecurityAddGroupPermissions">>) -> [security];
+permissions_for(<<"SecurityDeleteGroupPermissions">>) -> [security];
 permissions_for(<<"SecurityListPermissions">>) -> [security];
 
 permissions_for(_) -> [].

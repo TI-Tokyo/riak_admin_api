@@ -25,6 +25,7 @@
 
 -export([process_request/1]).
 
+-include("riak_admin_api.hrl").
 -include_lib("kernel/include/logger.hrl").
 
 -spec process_request(#{}) ->
@@ -34,146 +35,130 @@ process_request(Request) ->
         case Request of
             #{<<"action">> := <<"SecurityListUsers">>} ->
                 A = [ #{name => Name,
+                        created => Created,
+                        modified => Modified,
+                        expires => Expires,
                         groups => Groups,
                         auth_method => AuthMethod,
                         permissions => Permissions}
                       || {Name, ?USER#{groups = Groups,
-                                           created = Created,
-                                           expires = Expires,
-                                           permissions = Permissions,
-                                           auth_details = #{auth_method := AuthMethod}}}
+                                       created = Created,
+                                       modified = Modified,
+                                       expires = Expires,
+                                       permissions = Permissions,
+                                       auth_details = #{auth_method := AuthMethod}}}
                              <- riak_admin_api_ug:list_users() ],
                 {ok, A};
+
             #{<<"action">> := <<"SecurityCreateUser">>,
               <<"params">> := #{<<"name">> := Name,
                                 <<"options">> := Options}} ->
-                riak_core_security:add_user(
-                  binary_to_list(Name),
-                  maps:to_list(deep_binary_to_list(Options)));
-            #{<<"action">> := <<"SecurityUpdateUser">>,
+                case make_user(Options) of
+                    {ok, User} ->
+                        riak_admin_api_ug:add_user(Name, User);
+                    ER ->
+                        ER
+                end;
+
+            #{<<"action">> := <<"SecuritySetUserExpiry">>,
               <<"params">> := #{<<"name">> := Name,
-                                <<"options">> := Options}} ->
-                riak_core_security:alter_user(
-                  binary_to_list(Name),
-                  maps:to_list(deep_binary_to_list(Options)));
+                                <<"expires">> := Expires_}} ->
+                try
+                    Expires =
+                        case Expires_ of
+                            <<"never">> ->
+                                never;
+                            _ ->
+                                binary_to_integer(Expires_)
+                        end,
+                    riak_admin_api_ug:set_user_expiry(Name, Expires)
+                catch
+                    error:badarg ->
+                        {error, invalid_arg}
+                end;
+
             #{<<"action">> := <<"SecurityDeleteUser">>,
               <<"params">> := #{<<"name">> := Name}} ->
-                riak_core_security:del_user(binary_to_list(Name));
+                riak_admin_api_ug:del_user(Name);
 
             #{<<"action">> := <<"SecurityListGroups">>} ->
-                A = [ begin
-                          Grants = [#{scope => jsonify_scope(Scope),
-                                      permissions => jsonify_permissions(PP)}
-                                    || {Scope, PP} <- riak_core_security:get_group_grants(Name)],
-                          OtherOptions = maps:from_list([{unicode:characters_to_binary(K, utf8),
-                                                          unicode:characters_to_binary(V, utf8)}
-                                                         || {K, V} <- Options]),
-                          #{name => Name,
-                            grants => Grants,
-                            options => OtherOptions}
-                      end || {Name, [Options]} <- riak_core_security:get_groups() ],
+                A = [ #{name => Name,
+                        created => Created,
+                        modified => Modified,
+                        permissions => Permissions}
+                      || {Name, ?GROUP{created = Created,
+                                       modified = Modified,
+                                       permissions = Permissions}}
+                             <- riak_admin_api_ug:list_groups() ],
                 {ok, A};
+
             #{<<"action">> := <<"SecurityCreateGroup">>,
               <<"params">> := #{<<"name">> := Name,
                                 <<"options">> := Options}} ->
-                riak_core_security:add_group(
-                  binary_to_list(Name),
-                  maps:to_list(deep_binary_to_list(Options)));
-            #{<<"action">> := <<"SecurityUpdateGroup">>,
-              <<"params">> := #{<<"name">> := Name,
-                                <<"options">> := Options}} ->
-                riak_core_security:alter_group(
-                  binary_to_list(Name),
-                  maps:to_list(deep_binary_to_list(Options)));
+                case make_group(Options) of
+                    {ok, Group} ->
+                        riak_admin_api_ug:add_group(Name, Group);
+                    ER ->
+                        ER
+                end;
+
             #{<<"action">> := <<"SecurityDeleteGroup">>,
               <<"params">> := #{<<"name">> := Name}} ->
-                riak_core_security:del_group(binary_to_list(Name));
+                riak_admin_api_ug:del_group(Name);
 
-            #{<<"action">> := <<"SecurityAddUserGroup">>,
+            #{<<"action">> := <<"SecurityAddUserGroups">>,
               <<"params">> := #{<<"user">> := User,
-                                <<"group">> := Group}} ->
-                case lists:keyfind(User, 1, riak_core_security:get_users()) of
-                    {_, [PL|_]} ->
-                        GG0 = proplists:get_value("groups", PL, []),
-                        GG9 = string:join([binary_to_list(A) || A <- lists:usort(GG0 ++ [Group])], ","),
-                        Options = [{"groups", GG9}],
-                        riak_core_security:alter_user(binary_to_list(User), Options);
-                    _ ->
-                        {error, notfound}
-                end;
-            #{<<"action">> := <<"SecurityDeleteUserGroup">>,
+                                <<"groups">> := Groups}} ->
+                riak_admin_api_ug:add_user_groups(User, Groups);
+
+            #{<<"action">> := <<"SecurityDeleteUserGroups">>,
               <<"params">> := #{<<"user">> := User,
-                                <<"group">> := Group}} ->
-                case lists:keyfind(User, 1, riak_core_security:get_users()) of
-                    {_, [PL|_]} ->
-                        GG0 = proplists:get_value("groups", PL),
-                        GG9 = string:join([binary_to_list(A) || A <- lists:usort(GG0 -- [Group])], ","),
-                        Options = [{"groups", GG9}],
-                        riak_core_security:alter_user(binary_to_list(User), Options);
-                    _ ->
-                        {error, notfound}
+                                <<"groups">> := Groups}} ->
+                riak_admin_api_ug:del_user_groups(User, Groups);
+
+            #{<<"action">> := <<"SecurityAddUserPermissions">>,
+              <<"params">> := #{<<"user">> := User,
+                                <<"permissions">> := Perms_}} ->
+                case lists:foldl(fun validate_permission_/2, [], Perms_) of
+                    [] ->
+                        {error, invalid_arg};
+                    Perms ->
+                        riak_admin_api_ug:add_user_permissions(User, Perms)
                 end;
 
-            #{<<"action">> := <<"SecurityAddUserGrant">>,
+            #{<<"action">> := <<"SecurityDeleteUserPermissions">>,
               <<"params">> := #{<<"user">> := User,
-                                <<"permission">> := Permission,
-                                <<"scope">> := Scope}} ->
-                case lists:keyfind(User, 1, riak_core_security:get_users()) of
-                    {_, [_|_]} ->
-                        riak_core_security:add_grant(
-                          ["user/"++binary_to_list(User)],
-                          binary_to_list(Scope),
-                          [binary_to_list(Permission)]);
-                    _ ->
-                        {error, notfound}
-                end;
-            #{<<"action">> := <<"SecurityDeleteUserGrant">>,
-              <<"params">> := #{<<"user">> := User,
-                                <<"permission">> := Permission,
-                                <<"scope">> := Scope}} ->
-                case lists:keyfind(User, 1, riak_core_security:get_users()) of
-                    {_, [_|_]} ->
-                        riak_core_security:add_revoke(
-                          ["user/"++binary_to_list(User)],
-                          binary_to_list(Scope),
-                          [binary_to_list(Permission)]);
-                    _ ->
-                        {error, notfound}
+                                <<"permissions">> := Perms_}} ->
+                case lists:foldl(fun validate_permission_/2, [], Perms_) of
+                    [] ->
+                        {error, invalid_arg};
+                    Perms ->
+                        riak_admin_api_ug:del_user_permissions(User, Perms)
                 end;
 
-            #{<<"action">> := <<"SecurityAddGroupGrant">>,
+            #{<<"action">> := <<"SecurityAddGroupPermissions">>,
               <<"params">> := #{<<"group">> := Group,
-                                <<"permission">> := Permission,
-                                <<"scope">> := Scope}} ->
-                case lists:keyfind(Group, 1, riak_core_security:get_groups()) of
-                    {_, [_|_]} ->
-                        riak_core_security:add_grant(
-                          ["group/"++binary_to_list(Group)],
-                          binary_to_list(Scope),
-                          [binary_to_list(Permission)]);
-                    _ ->
-                        {error, notfound}
+                                <<"permissions">> := Perms_}} ->
+                case lists:foldl(fun validate_permission_/2, [], Perms_) of
+                    [] ->
+                        {error, invalid_arg};
+                    Perms ->
+                        riak_admin_api_ug:add_group_permissions(Group, Perms)
                 end;
-            #{<<"action">> := <<"SecurityDeleteGroupGrant">>,
+
+            #{<<"action">> := <<"SecurityDeleteGroupPermissions">>,
               <<"params">> := #{<<"group">> := Group,
-                                <<"permission">> := Permission,
-                                <<"scope">> := Scope}} ->
-                case lists:keyfind(Group, 1, riak_core_security:get_groups()) of
-                    {_, [_|_]} ->
-                        riak_core_security:add_revoke(
-                          ["group/"++binary_to_list(Group)],
-                          binary_to_list(Scope),
-                          [binary_to_list(Permission)]);
-                    _ ->
-                        {error, notfound}
+                                <<"permissions">> := Perms_}} ->
+                case lists:foldl(fun validate_permission_/2, [], Perms_) of
+                    [] ->
+                        {error, invalid_arg};
+                    Perms ->
+                        riak_admin_api_ug:del_group_permissions(Group, Perms)
                 end;
+
 
             #{<<"action">> := <<"SecurityListPermissions">>} ->
-                {ok, PP} = application:get_env(riak_core, permissions),
-                {ok, lists:flatten(
-                       [[iolist_to_binary([atom_to_list(App), $., atom_to_list(K)]) || K <- KK]
-                        || {App, KK} <- PP]
-                      )}
+                {ok, [atom_to_binary(P) || P <- riak_admin_api_ug:all_permissions()]}
         end,
 
     case Res of
@@ -182,9 +167,55 @@ process_request(Request) ->
         {ok, GoodResult} ->
             {ok, GoodResult};
         {error, notfound} ->
-            {404, <<"No such user or group">>}
+            {404, <<"No such user or group">>};
+        {error, no_such_group} ->
+            {412, <<"No such user or group">>};
+        {error, invalid_spec} ->
+            {400, <<"Invalid parameter">>};
+        {error, invalid_arg} ->
+            {400, <<"Invalid parameter">>}
     end.
 
+
+make_user(#{<<"name">> := Name,
+            <<"auth_details">> := #{<<"method">> := <<"password">>,
+                                    <<"password_hash">> := PwdHash}} = Options) ->
+    Now = os:system_time(millisecond),
+    try
+        Expires =
+            case maps:get(<<"expires">>, Options, undefined) of
+                undefined ->
+                    never;
+                Defined ->
+                    binary_to_integer(Defined)
+            end,
+        {ok, ?USER{auth_details = #{method => password,
+                                    password_hash => PwdHash},
+                   groups = [],
+                   permissions = [],
+                   created = Now,
+                   modified = Now,
+                   expires = Expires}}
+    catch
+        error:badarg ->
+            {error, invalid_arg}
+    end;
+make_user(_) ->
+    {error, invalid_spec}.
+
+make_group(#{<<"name">> := Name} = Options) ->
+    Now = os:system_time(millisecond),
+    {ok, ?GROUP{created = Now,
+                modified = Now,
+                permissions = []}};
+make_group(_) ->
+    {error, invalid_spec}.
+
+
+validate_permission_(<<"cluster_observer">>, Q) -> [cluster_observer | Q];
+validate_permission_(<<"cluster_admin">>, Q) -> [cluster_admin | Q];
+validate_permission_(<<"security">>, Q) -> [security, Q];
+validate_permission_(_, Q) -> Q.
 
 deep_binary_to_list(A) ->
     maps:fold(
