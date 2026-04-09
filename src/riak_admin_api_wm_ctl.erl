@@ -32,11 +32,12 @@
          process_post/2
         ]).
 
+-include("riak_admin_api.hrl").
 -include_lib("webmachine/include/webmachine.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--record(context, {request :: undefined | #{},
-                  user :: string()}).
+-record(context, {request :: undefined | map(),
+                  user :: undefined | string()}).
 
 init([]) ->
     {ok, #context{}}.
@@ -60,28 +61,49 @@ options(RD, Ctx) ->
     {riak_admin_api_web:cors_headers(), RD, Ctx}.
 
 -spec is_authorized(#wm_reqdata{}, #context{}) ->
-          {boolean(), #wm_reqdata{}, #context{}}.
+          {true|{halt, 401}, #wm_reqdata{}, #context{}}.
 is_authorized(RD, Ctx) ->
-    Request = #{<<"action">> := Action} =
-        riak_kv_wm_json:decode(wrq:req_body(RD)),
-    User = extract_user(RD),
-    UserPermissions = get_user_permissions(User),
-    ReqPermissions = riak_admin_api_web:permissions_for(Action),
-    Res =
-        case intersect(UserPermissions, ReqPermissions) of
-            true ->
-                true;
-            false ->
-                {halt, 401}
-        end,
-    {Res, wrq:set_resp_headers(riak_admin_api_web:cors_headers(), RD),
-     Ctx#context{request = Request, user = User}}.
+    Request = riak_kv_wm_json:decode(wrq:req_body(RD)),
+    RD1 = wrq:set_resp_headers(riak_admin_api_web:cors_headers(), RD),
+    case {extract_username(RD), extract_usercreds(RD)} of
+        {undefined, _} ->
+            {{halt, 401}, RD1, Ctx};
+        {_, undefined} ->
+            {{halt, 401}, RD1, Ctx};
+        {Name, Creds} ->
+            is_authorized2(Name, Creds, RD1, Ctx#context{request = Request})
+        end.
+is_authorized2(Name, Creds, RD, Ctx = #context{request = #{<<"action">> := Action}}) ->
+    case riak_admin_api_ug:get_user(Name) of
+        {error, notfound} ->
+            {{halt, 401}, RD, Ctx};
+        {ok, User = ?USER{permissions = UserPermissions}} ->
+            ReqPermissions = riak_admin_api_web:permissions_for(Action),
+            Res =
+                case intersect(UserPermissions, ReqPermissions) of
+                    true ->
+                        true;
+                    false ->
+                        {halt, 403}
+                end,
+            {Res, RD, Ctx#context{user = User}}
+    end.
 
-extract_user(RD) ->
-    wrq:get_req_header("X-Riak-User", RD).
-get_user_permissions(User) ->
-    ?LOG_NOTICE("STUB: get_user_permissions(~p) returns all permissions", [User]),
-    [cluster_observer, cluster_admin, security].
+extract_username(RD) ->
+    case wrq:get_req_header("X-Riak-User", RD) of
+        undefined ->
+            undefined;
+        Defined ->
+            iolist_to_binary(Defined)
+    end.
+extract_usercreds(RD) ->
+    case wrq:get_req_header("X-Riak-Auth", RD) of
+        undefined ->
+            undefined;
+        Defined ->
+            iolist_to_binary(Defined)
+    end.
+
 intersect([], _) ->
     true;
 intersect(_, []) ->

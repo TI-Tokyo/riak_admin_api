@@ -381,16 +381,15 @@ SystemGetVersionInfo
 
 SecurityListUsers
 SecurityCreateUser
-SecurityUpdateUser
+SecuritySetUserExpiry
 SecurityDeleteUser
 SecurityListGroups
 SecurityCreateGroup
-SecurityUpdateGroup
 SecurityDeleteGroup
-SecurityAddUserGroup
-SecurityDeleteUserGroup
-SecurityAddUserGrant
-SecurityDeleteUserGrant
-SecurityAddGroupGrant
-SecurityDeleteGroupGrant
+SecurityAddUserGroups
+SecurityDeleteUserGroups
+SecurityAddUserPermissions
+SecurityDeleteUserPermissions
+SecurityAddGroupPermissions
+SecurityDeleteGroupPermissions
 SecurityListPermissions

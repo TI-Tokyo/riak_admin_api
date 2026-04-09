@@ -39,8 +39,8 @@ init([]) ->
         #{strategy => one_for_one,
           intensity => 10,
           period => 10},
-    case application:get_key(riak_admin_api, admin_api_enabled) of
-        true ->
+    case application:get_env(riak_admin_api, admin_api_enabled) of
+        {ok, true} ->
             {ok, [{Ip, Port}]} = application:get_env(riak_admin_api, https),
             WMConfig =
                 [{name, riak_api_web:spec_name(https, Ip, Port)},

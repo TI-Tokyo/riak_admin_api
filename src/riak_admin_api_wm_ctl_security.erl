@@ -41,12 +41,12 @@ process_request(Request) ->
                         groups => Groups,
                         auth_method => AuthMethod,
                         permissions => Permissions}
-                      || {Name, ?USER#{groups = Groups,
-                                       created = Created,
-                                       modified = Modified,
-                                       expires = Expires,
-                                       permissions = Permissions,
-                                       auth_details = #{auth_method := AuthMethod}}}
+                      || {Name, ?USER{groups = Groups,
+                                      created = Created,
+                                      modified = Modified,
+                                      expires = Expires,
+                                      permissions = Permissions,
+                                      auth_details = #{auth_method := AuthMethod}}}
                              <- riak_admin_api_ug:list_users() ],
                 {ok, A};
 
@@ -177,8 +177,7 @@ process_request(Request) ->
     end.
 
 
-make_user(#{<<"name">> := Name,
-            <<"auth_details">> := #{<<"method">> := <<"password">>,
+make_user(#{<<"auth_details">> := #{<<"method">> := <<"password">>,
                                     <<"password_hash">> := PwdHash}} = Options) ->
     Now = os:system_time(millisecond),
     try
@@ -203,7 +202,7 @@ make_user(#{<<"name">> := Name,
 make_user(_) ->
     {error, invalid_spec}.
 
-make_group(#{<<"name">> := Name} = Options) ->
+make_group(#{}) ->
     Now = os:system_time(millisecond),
     {ok, ?GROUP{created = Now,
                 modified = Now,
@@ -216,9 +215,3 @@ validate_permission_(<<"cluster_observer">>, Q) -> [cluster_observer | Q];
 validate_permission_(<<"cluster_admin">>, Q) -> [cluster_admin | Q];
 validate_permission_(<<"security">>, Q) -> [security, Q];
 validate_permission_(_, Q) -> Q.
-
-deep_binary_to_list(A) ->
-    maps:fold(
-      fun(K, V, Q) when is_binary(V) -> maps:put(binary_to_list(K), binary_to_list(V), Q);
-         (K, V, Q) when is_map(V) -> maps:put(binary_to_list(K), deep_binary_to_list(V), Q)
-      end, #{}, A).

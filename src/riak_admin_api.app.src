@@ -5,6 +5,9 @@
   {applications,
    [kernel,
     stdlib,
+    riak_core,
+    riak_kv,
+    riak_api,
     webmachine
    ]},
   {env,[]},

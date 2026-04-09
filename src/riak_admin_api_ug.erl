@@ -55,24 +55,24 @@ all_permissions() ->
 
 -spec get_user(id()) -> {ok, user()} | {error, notfound | expired}.
 get_user(Name) ->
-    case riak_core_metadata:get({?CORE_MD_PREFIX, <<"u">>}, Name) of
+    case riak_core_metadata:get({?ADMIN_MD_PREFIX, <<"u">>}, Name) of
         undefined ->
             {error, notfound};
         Defined = ?USER{expires = Expires} ->
-            case Expires > now() of
+            case Expires > now_ms() of
                 true ->
                     {ok, Defined};
                 false ->
-                    ok = riak_core_metadata:delete({?CORE_MD_PREFIX, <<"u">>}, Name)
+                    ok = riak_core_metadata:delete({?ADMIN_MD_PREFIX, <<"u">>}, Name),
                     {error, expired}
             end
     end.
 
 -spec add_user(id(), user()) -> ok | {error, already_exists}.
 add_user(Name, User) ->
-    Record = User?USER{created = now(),
-                       modified = now()},
-    case riak_core_metadata:get({?CORE_MD_PREFIX, <<"u">>}, Name) of
+    Record = User?USER{created = now_ms(),
+                       modified = now_ms()},
+    case riak_core_metadata:get({?ADMIN_MD_PREFIX, <<"u">>}, Name) of
         undefined ->
             put_user(Name, Record);
         _ ->
@@ -82,16 +82,16 @@ add_user(Name, User) ->
 -spec del_user(id()) -> ok | {error, notfound | invalid_arg}.
 del_user(Name) ->
     case get_user(Name) of
-        undefined ->
+        {error, notfound} ->
             {error, notfound};
         _ ->
-            riak_core_metadata:delete({?CORE_MD_PREFIX, <<"u">>}, Name)
+            riak_core_metadata:delete({?ADMIN_MD_PREFIX, <<"u">>}, Name)
     end.
 
 -spec set_user_expiry(id(), never | non_neg_integer()) -> ok | {error, notfound}.
 set_user_expiry(Name, Expires) ->
     case get_user(Name) of
-        undefined ->
+        {error, notfound} ->
             {error, notfound};
         {ok, User} ->
             put_user(Name, User?USER{expires = Expires})
@@ -112,7 +112,7 @@ list_users() ->
 
 -spec get_group(id()) -> {ok, group()} | {error, notfound}.
 get_group(Name) ->
-    case riak_core_metadata:get({?CORE_MD_PREFIX, <<"g">>}, Name) of
+    case riak_core_metadata:get({?ADMIN_MD_PREFIX, <<"g">>}, Name) of
         undefined ->
             {error, notfound};
         Defined ->
@@ -126,13 +126,13 @@ add_group(Name, Record) ->
 -spec del_group(id()) -> ok | {error, notfound | has_members}.
 del_group(Name) ->
     case get_group(Name) of
-        undefined ->
+        {error, notfound} ->
             {error, notfound};
         _ ->
             Members = [UName || {UName, ?USER{groups = UGroups}} <- list_users(),
                                 lists:member(Name, UGroups)],
             if Members =:= [] ->
-                    riak_core_metadata:delete({?CORE_MD_PREFIX, <<"g">>}, Name);
+                    riak_core_metadata:delete({?ADMIN_MD_PREFIX, <<"g">>}, Name);
                el/=se ->
                     {error, has_members}
             end
@@ -150,7 +150,7 @@ list_groups() ->
      ).
 
 
--spec add_user_group(id(), [id()]) -> ok | {error, notfound | no_such_group}.
+-spec add_user_groups(id(), [id()]) -> ok | {error, notfound | no_such_group}.
 add_user_groups(Name, Groups) ->
     ExistingGG = list_group_names(),
     case lists:all(fun(G) -> lists:member(G, ExistingGG) end, Groups) of
@@ -166,7 +166,7 @@ add_user_groups(Name, Groups) ->
                             ok;
                         GG9 ->
                             Record = User?USER{groups = GG9,
-                                               modified = now()},
+                                               modified = now_ms()},
                             put_user(Name, Record)
                     end
             end
@@ -183,7 +183,7 @@ del_user_groups(Name, Groups) ->
                     ok;
                 GG9 ->
                     Record = User?USER{groups = GG9,
-                                       modified = now()},
+                                       modified = now_ms()},
                     put_user(Name, Record)
             end
     end.
@@ -207,7 +207,7 @@ mod_user_permissions(Name, Perms, Op) ->
                     ok;
                 PP9 ->
                     Record = User?USER{permissions = PP9,
-                                       modified = now()},
+                                       modified = now_ms()},
                     put_user(Name, Record)
             end
     end.
@@ -230,7 +230,7 @@ mod_group_permissions(Name, Perms, Op) ->
                     ok;
                 PP9 ->
                     Record = User?GROUP{permissions = PP9,
-                                        modified = now()},
+                                        modified = now_ms()},
                     put_group(Name, Record)
             end
     end.
@@ -238,20 +238,20 @@ mod_group_permissions(Name, Perms, Op) ->
 %% internal
 
 put_user(Name, A) ->
-    riak_core_metadata:put({?CORE_MD_PREFIX, <<"u">>}, Name, A, []).
+    riak_core_metadata:put({?ADMIN_MD_PREFIX, <<"u">>}, Name, A, []).
 put_group(Name, A) ->
-    riak_core_metadata:put({?CORE_MD_PREFIX, <<"g">>}, Name, A, []).
+    riak_core_metadata:put({?ADMIN_MD_PREFIX, <<"g">>}, Name, A, []).
 
 list_group_names() ->
     riak_core_metadata:fold(
       fun({_, [?TOMBSTONE]}, Acc) ->
               Acc;
-         ({Name, A}, Acc) ->
+         ({Name, _}, Acc) ->
               [Name | Acc]
       end,
       [], {?ADMIN_MD_PREFIX, <<"g">>}
      ).
 
 
-now() ->
+now_ms() ->
     os:system_time(millisecond).
