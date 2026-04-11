@@ -46,7 +46,7 @@ process_request(Request) ->
                                       modified = Modified,
                                       expires = Expires,
                                       permissions = Permissions,
-                                      auth_details = #{auth_method := AuthMethod}}}
+                                      auth_details = #{method := AuthMethod}}}
                              <- riak_admin_api_ug:list_users() ],
                 {ok, A};
 
@@ -189,7 +189,7 @@ make_user(#{<<"auth_details">> := #{<<"method">> := <<"password">>,
                     binary_to_integer(Defined)
             end,
         {ok, ?USER{auth_details = #{method => password,
-                                    password_hash => PwdHash},
+                                    details => #{password_hash => PwdHash}},
                    groups = [],
                    permissions = [],
                    created = Now,

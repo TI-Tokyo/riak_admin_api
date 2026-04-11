@@ -37,7 +37,7 @@
 -include_lib("kernel/include/logger.hrl").
 
 -record(context, {request :: undefined | map(),
-                  user :: undefined | string()}).
+                  user :: undefined | user()}).
 
 init([]) ->
     {ok, #context{}}.

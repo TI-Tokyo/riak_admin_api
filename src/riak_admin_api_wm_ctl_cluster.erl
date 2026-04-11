@@ -341,6 +341,6 @@ write_advanced_config2(Node, Blob) ->
 
 
 signal_restart(Node) when Node == node() ->
-    riak:deadmans_hand_restart();
+    riak:deadmanshand_restart();
 signal_restart(Node) ->
-    rpc:call(Node, riak, deadmans_hand_restart, []).
+    rpc:call(Node, riak, deadmanshand_restart, []).
