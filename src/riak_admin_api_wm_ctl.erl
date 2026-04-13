@@ -65,10 +65,8 @@ options(RD, Ctx) ->
 is_authorized(RD, Ctx) ->
     Request = riak_kv_wm_json:decode(wrq:req_body(RD)),
     RD1 = wrq:set_resp_headers(riak_admin_api_web:cors_headers(), RD),
-    case {extract_username(RD), extract_usercreds(RD)} of
-        {undefined, _} ->
-            {{halt, 401}, RD1, Ctx};
-        {_, undefined} ->
+    case extract_usercreds(RD) of
+        undefined ->
             {{halt, 401}, RD1, Ctx};
         {Name, Creds} ->
             is_authorized2(Name, Creds, RD1, Ctx#context{request = Request})
@@ -77,31 +75,31 @@ is_authorized2(Name, Creds, RD, Ctx = #context{request = #{<<"action">> := Actio
     case riak_admin_api_ug:get_user(Name) of
         {error, notfound} ->
             {{halt, 401}, RD, Ctx};
-        {ok, User = ?USER{permissions = UserPermissions}} ->
-            ReqPermissions = riak_admin_api_web:permissions_for(Action),
-            Res =
-                case intersect(UserPermissions, ReqPermissions) of
-                    true ->
-                        true;
-                    false ->
-                        {halt, 403}
-                end,
-            {Res, RD, Ctx#context{user = User}}
+        {ok, User = ?USER{permissions = UserPermissions,
+                          auth_details = AuthDetails}} ->
+            case riak_admin_api_auth:authenticate(AuthDetails, Creds) of
+                true ->
+                    ReqPermissions = riak_admin_api_web:permissions_for(Action),
+                    case intersect(UserPermissions, ReqPermissions) of
+                        true ->
+                            {true, RD, Ctx#context{user = User}};
+                        false ->
+                            {{halt, 403}, RD, Ctx}
+                    end;
+                false ->
+                    {{halt, 401}, RD, Ctx}
+            end
     end.
 
-extract_username(RD) ->
-    case wrq:get_req_header("X-Riak-User", RD) of
-        undefined ->
-            undefined;
-        Defined ->
-            iolist_to_binary(Defined)
-    end.
 extract_usercreds(RD) ->
-    case wrq:get_req_header("X-Riak-Auth", RD) of
-        undefined ->
-            undefined;
-        Defined ->
-            iolist_to_binary(Defined)
+    case wrq:get_req_header("Authorization", RD) of
+        "Basic " ++ Base64 ->
+            UserPass = base64:decode_to_string(Base64),
+            [User, Pass] = [list_to_binary(X) || X <- string:tokens(UserPass, ":")],
+            {User, #{method => password,
+                     details => #{password => Pass}}};
+        _ ->
+            undefined
     end.
 
 intersect([], _) ->

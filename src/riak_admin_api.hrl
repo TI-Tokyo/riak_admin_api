@@ -27,6 +27,8 @@
 -type permission() :: cluster_observer | cluster_admin | security.
 
 -type auth_method() :: password.
+-type auth_details() :: #{method := auth_method(),
+                          details := map()}.
 
 -record(user_v1, {groups :: [id()],
                   created :: ts(),

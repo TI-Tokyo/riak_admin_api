@@ -178,7 +178,7 @@ process_request(Request) ->
 
 
 make_user(#{<<"auth_details">> := #{<<"method">> := <<"password">>,
-                                    <<"password_hash">> := PwdHash}} = Options) ->
+                                    <<"password">> := Password}} = Options) ->
     Now = os:system_time(millisecond),
     try
         Expires =
@@ -188,8 +188,10 @@ make_user(#{<<"auth_details">> := #{<<"method">> := <<"password">>,
                 Defined ->
                     binary_to_integer(Defined)
             end,
+        {Hash, Salt} = riak_admin_api_auth:hash_password(Password),
         {ok, ?USER{auth_details = #{method => password,
-                                    details => #{password_hash => PwdHash}},
+                                    details => #{password_hash => Hash,
+                                                 salt => Salt}},
                    groups = [],
                    permissions = [],
                    created = Now,
