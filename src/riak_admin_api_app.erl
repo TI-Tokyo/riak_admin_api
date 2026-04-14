@@ -40,9 +40,10 @@ start(_Type, _) ->
             case application:get_env(riak_admin_api, admin_api_enabled, false) of
                 true ->
                     ok = webmachine_router:add_route(
-                           {["ctl"], riak_admin_api_wm_ctl, []});
+                           {["ctl"], riak_admin_api_wm_ctl, []}),
+                    application:set_env(riak_admin_api, admin_api_effective, true);
                 false ->
-                    ok
+                    application:set_env(riak_admin_api, admin_api_effective, false)
             end,
             {ok, Pid};
         {error, Reason} ->

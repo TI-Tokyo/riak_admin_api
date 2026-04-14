@@ -31,8 +31,8 @@
                           details := map()}.
 
 -record(user_v1, {groups :: [id()],
-                  created :: ts(),
-                  modified :: ts(),
+                  created :: undefined | ts(),
+                  modified :: undefined | ts(),
                   expires :: never | ts(),
                   permissions :: [permission()],
                   auth_details :: #{method := auth_method(),
