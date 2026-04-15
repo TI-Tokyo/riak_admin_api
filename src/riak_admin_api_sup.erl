@@ -1,6 +1,6 @@
 %% -------------------------------------------------------------------
 %%
-%% riak_admin_sup: Riak Admin supervisor.
+%% riak_admin_api_sup: Riak Admin supervisor.
 %%
 %% Copyright (c) 2026 TI Tokyo.  All Rights Reserved.
 %%
@@ -52,9 +52,7 @@ init([]) ->
                  {nodelay, true}
                 ],
             ChildSpecs =
-                [#{id => riak_admin_api_ug,
-                   start => {riak_admin_api_ug, start_link, []}},
-                 #{id => riak_admin_api_web,
+                [#{id => riak_admin_api_web,
                    start => {webmachine_mochiweb, start, [WMConfig]},
                    modules => [mochiweb_socket_server]}
                 ],

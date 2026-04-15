@@ -41,6 +41,7 @@ start(_Type, _) ->
                 true ->
                     ok = webmachine_router:add_route(
                            {["ctl"], riak_admin_api_wm_ctl, []}),
+                    ok = clique:register([riak_admin_api_cli]),
                     application:set_env(riak_admin_api, admin_api_effective, true);
                 false ->
                     application:set_env(riak_admin_api, admin_api_effective, false)

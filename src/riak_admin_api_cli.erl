@@ -37,7 +37,7 @@ register_all_usage() ->
     clique:register_usage(["riak-admin", "http-admin-api", "status", '*'], status_usage()),
     clique:register_usage(["riak-admin", "http-admin-api", "add-user"], add_user_usage()),
     clique:register_usage(["riak-admin", "http-admin-api", "del-user"], del_user_usage()),
-    clique:register_usage(["riak-admin", "http-admin-api", "list-users"], list_user_usage()),
+    clique:register_usage(["riak-admin", "http-admin-api", "list-users"], list_users_usage()),
     clique:register_usage(["riak-admin", "http-admin-api", "reset"], reset_usage()).
 
 register_all_commands() ->
@@ -47,7 +47,7 @@ register_all_commands() ->
        status1_spec(),
        add_user_spec(),
        del_user_spec(),
-       list_user_spec(),
+       list_users_spec(),
        reset_spec()
       ]).
 
@@ -72,12 +72,12 @@ status_usage() ->
 status0_spec() ->
     [["riak-admin", "http-admin-api", "status"],
      '_', [],
-     status_cmd/3
+     fun status_cmd/3
     ].
 status1_spec() ->
     [["riak-admin", "http-admin-api", "status", '*'],
      '_', [],
-     status_cmd/3
+     fun status_cmd/3
     ].
 
 status_cmd([_, _, _], _, _Options) ->
@@ -94,7 +94,7 @@ status_cmd([_, _, _, "enable"], _, _) ->
     Res =
         case riak_admin_api:enable() of
             ok ->
-                "OK";
+                [];
             {error, disabled_in_riak_conf} ->
                 "Disabled in riak.conf"
         end,
@@ -103,11 +103,14 @@ status_cmd([_, _, _, "disable"], _, _) ->
     Res =
         case riak_admin_api:disable() of
             ok ->
-                "OK";
+                [];
             {error, disabled_in_riak_conf} ->
                 "Disabled in riak.conf"
         end,
-    [clique_status_text(Res)].
+    [clique_status_text(Res)];
+status_cmd([_, _, _ | _], _, _) ->
+    clique_status:usage().
+
 
 
 main(Fun, A, B, C) ->
@@ -167,7 +170,7 @@ add_user_cmd([_, _, _, UserDataPath], _, _) ->
                                         },
                             case riak_admin_api_ug:add_user(Name, User) of
                                 ok ->
-                                    [clique_status_text("OK")];
+                                    [];
                                 {error, already_exists} ->
                                     [clique_status_alert("Already exists")]
                             end;
@@ -223,19 +226,25 @@ del_user_spec() ->
 del_user_cmd([_, _, _, Name], _, _) ->
     case riak_admin_api_ug:del_user(Name) of
         ok ->
-            [clique_status_text("OK")];
+            [];
         {error, notfound} ->
             [clique_status_alert("No such user")]
     end.
 
 
-list_user_usage() ->
+list_users_usage() ->
     ["riak admin http-admin-api list-users\n",
      "\n",
      "List users.\n"
     ].
 
-list_user_spec() ->
+list_users_spec() ->
+    [["riak-admin", "http-admin-api", "list-users"],
+     '_', [],
+     fun(A, B, C) -> main(fun list_users_cmd/3, A, B, C) end
+    ].
+
+list_users_cmd([_, _, _], _, _) ->
     Tf =  fun(never) -> <<"never">>;
              (A) -> calendar:system_time_to_rfc3339(A, [{unit, millisecond}]) end,
     Rows =
