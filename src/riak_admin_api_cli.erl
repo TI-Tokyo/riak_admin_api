@@ -22,6 +22,7 @@
 
 -behaviour(clique_handler).
 
+-include("riak_admin_api.hrl").
 -include_lib("kernel/include/logger.hrl").
 
 -export([register_cli/0]).
@@ -32,8 +33,8 @@ register_cli() ->
 
 register_all_usage() ->
     clique:register_usage(["riak-admin", "http-admin-api"], main_usage()),
-    clique:register_usage(["riak-admin", "http-admin-api", "status"], status_usage()],
-    clique:register_usage(["riak-admin", "http-admin-api", "status", '*'], status_usage()],
+    clique:register_usage(["riak-admin", "http-admin-api", "status"], status_usage()),
+    clique:register_usage(["riak-admin", "http-admin-api", "status", '*'], status_usage()),
     clique:register_usage(["riak-admin", "http-admin-api", "add-user"], add_user_usage()),
     clique:register_usage(["riak-admin", "http-admin-api", "del-user"], del_user_usage()),
     clique:register_usage(["riak-admin", "http-admin-api", "list-users"], list_user_usage()),
@@ -44,18 +45,28 @@ register_all_commands() ->
       fun(Args) -> apply(clique, register_command, Args) end,
       [status0_spec(),
        status1_spec(),
-       add_user_specs(),
-       del_user_specs(),
-       list_user_specs(),
-       reset_specs()
+       add_user_spec(),
+       del_user_spec(),
+       list_user_spec(),
+       reset_spec()
       ]).
 
 main_usage() ->
-    ["riak-admin http-admin-api { status | add-user | del-user\n"
+    ["riak admin http-admin-api { status | add-user | del-user\n"
      "                          | list-users | reset }\n",
      "\n",
      "Commands to control HTTP admin API.\n",
      "See individual subcommand usage for options and arguments\n"
+    ].
+
+status_usage() ->
+    ["riak admin http-admin-api status [enable | disable]\n",
+     "\n",
+     "Without arguments, shows whether the HTTP Admin API subsystem can be,\n",
+     "and is effectively, enabled, as well as number of users and groups.\n",
+     "With \"enable\" or \"disable\", attempts to turn it on or off.\n",
+     "Note that if the riak.conf setting `admin_api_enabled` is set to `false`,\n",
+     "it cannot be enabled.\n"
     ].
 
 status0_spec() ->
@@ -63,7 +74,7 @@ status0_spec() ->
      '_', [],
      status_cmd/3
     ].
-status1_specs() ->
+status1_spec() ->
     [["riak-admin", "http-admin-api", "status", '*'],
      '_', [],
      status_cmd/3
@@ -112,8 +123,25 @@ main(Fun, A, B, C) ->
             [clique_status_alert("HTTP Admin API not enabled")]
     end.
 
+add_user_usage() ->
+    ["riak admin http-admin-api add-user PATH\n",
+     "\n",
+     "Add a user, reading user specs from a file.\n",
+     "This is the way to add an initial superuser.\n",
+     "\n",
+     "The file read at PATH should be a JSON of the form:\n",
+     "  {\n",
+     "    \"name\": \"john\"\n",
+     "    \"password\": \"PASSWORD\",\n",
+     "    \"expires\": EXPIRES,\n",
+     "    \"permissions\": PERMISSIONS\n",
+     "  }\n",
+     "where PASSWORD is given in plain text, EXPIRES is a unixtime\n",
+     "in seconds of a time in future, PERMISSIONS is either \"all\" or\n",
+     "an array of any of [\"cluster_observer\", \"cluster_admin\", \"security\"].\n"
+    ].
 
-add_user_specs() ->
+add_user_spec() ->
     [["riak-admin", "http-admin-api", "add-user", '*'],
      '_', [],
      fun(A, B, C) -> main(fun add_user_cmd/3, A, B, C) end
@@ -153,6 +181,8 @@ add_user_cmd([_, _, _, UserDataPath], _, _) ->
             [clique_status_alert("User data file not readable")]
     end.
 
+-define(ALL_PERMS, [<<"cluster_observer">>, <<"cluster_admin">>, <<"security">>]).
+
 validate_perms(<<"all">>) ->
     [cluster_observer, cluster_admin, security];
 validate_perms(PP_) when is_list(PP_) ->
@@ -168,7 +198,7 @@ validate_perms(_) ->
 validate_expires(<<"never">>) ->
     never;
 validate_expires(A) when is_integer(A) ->
-    case os:system_time(millisecond) > A of
+    case os:system_time(second) > A of
         true ->
             invlaid;
         false ->
@@ -178,8 +208,13 @@ validate_expires(_) ->
     invlaid.
 
 
+del_user_usage() ->
+    ["riak admin http-admin-api del-user NAME\n",
+     "\n",
+     "Delete a user with name NAME.\n"
+    ].
 
-del_user_specs() ->
+del_user_spec() ->
     [["riak-admin", "http-admin-api", "del-user", '*'],
      '_', [],
      fun(A, B, C) -> main(fun del_user_cmd/3, A, B, C) end
@@ -194,7 +229,13 @@ del_user_cmd([_, _, _, Name], _, _) ->
     end.
 
 
-list_user_specs() ->
+list_user_usage() ->
+    ["riak admin http-admin-api list-users\n",
+     "\n",
+     "List users.\n"
+    ].
+
+list_user_spec() ->
     Tf =  fun(never) -> <<"never">>;
              (A) -> calendar:system_time_to_rfc3339(A, [{unit, millisecond}]) end,
     Rows =
@@ -209,20 +250,36 @@ list_user_specs() ->
                          created = Created,
                          modified = Modified,
                          expires = Expires,
-                         permissions = Permissions
+                         permissions = Permissions,
                          auth_details = #{method := AuthMethod}
                         }
             } <- riak_admin_api_ug:list_users() ],
     [clique_status:table(Rows)].
 
 
-reset_specs() ->
+reset_usage() ->
+    ["riak admin http-admin-api reset\n",
+     "\n",
+     "Delete all users and groups\n"
+    ].
+
+reset_spec() ->
     [["riak-admin", "http-admin-api", "reset"],
      '_', [],
-     reset_cmd/3
+     fun reset_cmd/3
     ].
 
 reset_cmd([_, _, _], _, _) ->
-    [riak_admin_api_ug:del_group(G) || {G, _} riak_admin_api_ug:list_groups()],
-    [riak_admin_api_ug:del_user(U) || {U, _} riak_admin_api_ug:list_users()],
+    [riak_admin_api_ug:del_group(G) || {G, _} <- riak_admin_api_ug:list_groups()],
+    [riak_admin_api_ug:del_user(U) || {U, _} <- riak_admin_api_ug:list_users()],
     [clique_status_alert("All groups and users deleted")].
+
+
+clique_status_text(F) ->
+    clique_status_text(F, []).
+clique_status_text(F, A) ->
+    clique_status:text(io_lib:format(F, A)).
+clique_status_alert(S) ->
+    clique_status_alert(S, []).
+clique_status_alert(F, A) ->
+    clique_status:alert([clique_status_text(F, A)]).
