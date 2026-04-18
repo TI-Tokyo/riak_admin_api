@@ -207,6 +207,13 @@ validate_expires(A) when is_integer(A) ->
         false ->
             {valid, A}
     end;
+validate_expires(A) when is_binary(A) ->
+    try
+        calendar:rfc3339_to_system_time(binary_to_list(A), [{unit, second}])
+    catch
+        _:_ ->
+            invlaid
+    end;
 validate_expires(_) ->
     invlaid.
 
