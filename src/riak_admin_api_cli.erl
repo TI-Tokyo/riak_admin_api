@@ -32,13 +32,13 @@ register_cli() ->
     register_all_commands().
 
 register_all_usage() ->
-    clique:register_usage(["riak-admin", "http-admin-api"], main_usage()),
-    clique:register_usage(["riak-admin", "http-admin-api", "status"], status_usage()),
-    clique:register_usage(["riak-admin", "http-admin-api", "status", '*'], status_usage()),
-    clique:register_usage(["riak-admin", "http-admin-api", "add-user"], add_user_usage()),
-    clique:register_usage(["riak-admin", "http-admin-api", "del-user"], del_user_usage()),
-    clique:register_usage(["riak-admin", "http-admin-api", "list-users"], list_users_usage()),
-    clique:register_usage(["riak-admin", "http-admin-api", "reset"], reset_usage()).
+    clique:register_usage(["riak-admin", "admin-api"], main_usage()),
+    clique:register_usage(["riak-admin", "admin-api", "status"], status_usage()),
+    clique:register_usage(["riak-admin", "admin-api", "status", '*'], status_usage()),
+    clique:register_usage(["riak-admin", "admin-api", "add-user"], add_user_usage()),
+    clique:register_usage(["riak-admin", "admin-api", "del-user"], del_user_usage()),
+    clique:register_usage(["riak-admin", "admin-api", "list-users"], list_users_usage()),
+    clique:register_usage(["riak-admin", "admin-api", "reset"], reset_usage()).
 
 register_all_commands() ->
     lists:foreach(
@@ -52,15 +52,15 @@ register_all_commands() ->
       ]).
 
 main_usage() ->
-    ["riak admin http-admin-api { status | add-user | del-user\n"
-     "                          | list-users | reset }\n",
+    ["riak admin admin-api { status | add-user | del-user\n"
+     "                     | list-users | reset }\n",
      "\n",
      "Commands to control HTTP admin API.\n",
      "See individual subcommand usage for options and arguments\n"
     ].
 
 status_usage() ->
-    ["riak admin http-admin-api status [enable | disable]\n",
+    ["riak admin admin-api status [enable | disable]\n",
      "\n",
      "Without arguments, shows whether the HTTP Admin API subsystem can be,\n",
      "and is effectively, enabled, as well as number of users and groups.\n",
@@ -70,12 +70,12 @@ status_usage() ->
     ].
 
 status0_spec() ->
-    [["riak-admin", "http-admin-api", "status"],
+    [["riak-admin", "admin-api", "status"],
      '_', [],
      fun status_cmd/3
     ].
 status1_spec() ->
-    [["riak-admin", "http-admin-api", "status", '*'],
+    [["riak-admin", "admin-api", "status", '*'],
      '_', [],
      fun status_cmd/3
     ].
@@ -127,7 +127,7 @@ main(Fun, A, B, C) ->
     end.
 
 add_user_usage() ->
-    ["riak admin http-admin-api add-user PATH\n",
+    ["riak admin admin-api add-user PATH\n",
      "\n",
      "Add a user, reading user specs from a file.\n",
      "This is the way to add an initial superuser.\n",
@@ -145,7 +145,7 @@ add_user_usage() ->
     ].
 
 add_user_spec() ->
-    [["riak-admin", "http-admin-api", "add-user", '*'],
+    [["riak-admin", "admin-api", "add-user", '*'],
      '_', [],
      fun(A, B, C) -> main(fun add_user_cmd/3, A, B, C) end
     ].
@@ -212,13 +212,13 @@ validate_expires(_) ->
 
 
 del_user_usage() ->
-    ["riak admin http-admin-api del-user NAME\n",
+    ["riak admin admin-api del-user NAME\n",
      "\n",
      "Delete a user with name NAME.\n"
     ].
 
 del_user_spec() ->
-    [["riak-admin", "http-admin-api", "del-user", '*'],
+    [["riak-admin", "admin-api", "del-user", '*'],
      '_', [],
      fun(A, B, C) -> main(fun del_user_cmd/3, A, B, C) end
     ].
@@ -233,13 +233,13 @@ del_user_cmd([_, _, _, Name], _, _) ->
 
 
 list_users_usage() ->
-    ["riak admin http-admin-api list-users\n",
+    ["riak admin admin-api list-users\n",
      "\n",
      "List users.\n"
     ].
 
 list_users_spec() ->
-    [["riak-admin", "http-admin-api", "list-users"],
+    [["riak-admin", "admin-api", "list-users"],
      '_', [],
      fun(A, B, C) -> main(fun list_users_cmd/3, A, B, C) end
     ].
@@ -267,13 +267,13 @@ list_users_cmd([_, _, _], _, _) ->
 
 
 reset_usage() ->
-    ["riak admin http-admin-api reset\n",
+    ["riak admin admin-api reset\n",
      "\n",
      "Delete all users and groups\n"
     ].
 
 reset_spec() ->
-    [["riak-admin", "http-admin-api", "reset"],
+    [["riak-admin", "admin-api", "reset"],
      '_', [],
      fun reset_cmd/3
     ].
