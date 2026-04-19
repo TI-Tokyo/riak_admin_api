@@ -53,7 +53,7 @@ register_all_commands() ->
 
 main_usage() ->
     ["riak admin admin-api { status | add-user | del-user\n"
-     "                     | list-users | reset }\n",
+     "                            | list-users | reset }\n",
      "\n",
      "Commands to control HTTP admin API.\n",
      "See individual subcommand usage for options and arguments\n"
@@ -139,9 +139,10 @@ add_user_usage() ->
      "    \"expires\": EXPIRES,\n",
      "    \"permissions\": PERMISSIONS\n",
      "  }\n",
-     "where PASSWORD is given in plain text, EXPIRES is a unixtime\n",
-     "in seconds of a time in future, PERMISSIONS is either \"all\" or\n",
-     "an array of any of [\"cluster_observer\", \"cluster_admin\", \"security\"].\n"
+     "where PASSWORD is given in plain text, EXPIRES is a unixtime,\n",
+     "in seconds, or as a rfc3339 string of a time in future, PERMISSIONS\n",
+     "is either \"all\" or an array of any of\n",
+     "[\"cluster_observer\", \"cluster_admin\", \"security\"].\n"
     ].
 
 add_user_spec() ->
@@ -187,7 +188,7 @@ add_user_cmd([_, _, _, UserDataPath], _, _) ->
 -define(ALL_PERMS, [<<"cluster_observer">>, <<"cluster_admin">>, <<"security">>]).
 
 validate_perms(<<"all">>) ->
-    [cluster_observer, cluster_admin, security];
+    {valid, [cluster_observer, cluster_admin, security]};
 validate_perms(PP_) when is_list(PP_) ->
     PP = [binary_to_atom(P) || P <- PP_, lists:member(P, ?ALL_PERMS)],
     if length(PP) == length(PP_) ->
@@ -199,7 +200,7 @@ validate_perms(_) ->
     invlaid.
 
 validate_expires(<<"never">>) ->
-    never;
+    {valid, never};
 validate_expires(A) when is_integer(A) ->
     case os:system_time(second) > A of
         true ->
@@ -209,12 +210,13 @@ validate_expires(A) when is_integer(A) ->
     end;
 validate_expires(A) when is_binary(A) ->
     try
-        calendar:rfc3339_to_system_time(binary_to_list(A), [{unit, second}])
+        E = calendar:rfc3339_to_system_time(binary_to_list(A), [{unit, millisecond}]),
+        {valid, E}
     catch
         _:_ ->
             invlaid
     end;
-validate_expires(_) ->
+validate_expires(_a) ->
     invlaid.
 
 
@@ -252,15 +254,18 @@ list_users_spec() ->
     ].
 
 list_users_cmd([_, _, _], _, _) ->
-    Tf =  fun(never) -> <<"never">>;
-             (A) -> calendar:system_time_to_rfc3339(A, [{unit, millisecond}]) end,
+    Tf = fun(never) -> <<"never">>;
+            (A) -> calendar:system_time_to_rfc3339(A, [{unit, millisecond}]) end,
+    Pf = fun(PP) when length(PP) == 3 -> "*";
+            (PP) -> string:join([fmtp(P) || P <- PP], ",")
+         end,
     Rows =
         [[{name, Name},
           {groups, Groups},
           {created, Tf(Created)},
           {modified, Tf(Modified)},
           {expires, Tf(Expires)},
-          {permissions, Permissions},
+          {permissions, Pf(Permissions)},
           {auth_method, AuthMethod}]
          || {Name, ?USER{groups = Groups,
                          created = Created,
@@ -271,6 +276,10 @@ list_users_cmd([_, _, _], _, _) ->
                         }
             } <- riak_admin_api_ug:list_users() ],
     [clique_status:table(Rows)].
+
+fmtp(cluster_admin) -> "adm";
+fmtp(cluster_observer) -> "obs";
+fmtp(security) -> "sec".
 
 
 reset_usage() ->

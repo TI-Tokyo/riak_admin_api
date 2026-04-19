@@ -103,7 +103,7 @@ list_users() ->
     riak_core_metadata:fold(
       fun({_, [?TOMBSTONE]}, Acc) ->
               Acc;
-         ({Name, A}, Acc) ->
+         ({Name, [A|_]}, Acc) ->
               [{Name, A} | Acc]
       end,
       [], {?ADMIN_MD_PREFIX, <<"u">>}
