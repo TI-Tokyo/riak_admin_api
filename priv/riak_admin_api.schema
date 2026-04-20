@@ -23,19 +23,19 @@
 
 
 %% @doc Enable monitoring requests on /ctl?
-{mapping, "security.monitoring", "riak_admin_api.sec_group.monitoring", [
+{mapping, "admin_api.security.monitoring", "riak_admin_api.sec_group.monitoring", [
   {datatype, {flag, enabled, disabled}},
   {default, enabled}
 ]}.
 
 %% @doc Enable cluster admin requests on /ctl?
-{mapping, "security.admin", "riak_admin_api.sec_group.admin", [
+{mapping, "admin_api.security.admin", "riak_admin_api.sec_group.admin", [
   {datatype, {flag, enabled, disabled}},
   {default, disabled}
 ]}.
 
 %% @doc Enable user/group management requests on /ctl?
-{mapping, "security.superuser", "riak_admin_api.sec_group.superuser", [
+{mapping, "admin_api.security.superuser", "riak_admin_api.sec_group.superuser", [
   {datatype, {flag, enabled, disabled}},
   {default, disabled}
 ]}.

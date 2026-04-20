@@ -233,7 +233,7 @@ del_user_spec() ->
     ].
 
 del_user_cmd([_, _, _, Name], _, _) ->
-    case riak_admin_api_ug:del_user(Name) of
+    case riak_admin_api_ug:del_user(list_to_binary(Name)) of
         ok ->
             [];
         {error, notfound} ->
