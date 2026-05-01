@@ -35,8 +35,8 @@ register_all_usage() ->
     clique:register_usage(["riak-admin", "admin-api"], main_usage()),
     clique:register_usage(["riak-admin", "admin-api", "status"], status_usage()),
     clique:register_usage(["riak-admin", "admin-api", "status", '*'], status_usage()),
-    clique:register_usage(["riak-admin", "admin-api", "add-user"], add_user_usage()),
-    clique:register_usage(["riak-admin", "admin-api", "del-user"], del_user_usage()),
+    clique:register_usage(["riak-admin", "admin-api", "add-user", '*'], add_user_usage()),
+    clique:register_usage(["riak-admin", "admin-api", "del-user", '*'], del_user_usage()),
     clique:register_usage(["riak-admin", "admin-api", "list-users"], list_users_usage()),
     clique:register_usage(["riak-admin", "admin-api", "reset"], reset_usage()).
 
@@ -119,7 +119,8 @@ main(Fun, A, B, C) ->
             try
                 Fun(A, B, C)
             catch
-                _:_ ->
+                _t:_e:_st ->
+                    ?LOG_WARNING("sssssssssss ~p ~p ~p", [_t, _e, _st]),
                     clique_status:usage()
             end;
         false ->
@@ -134,13 +135,13 @@ add_user_usage() ->
      "\n",
      "The file read at PATH should be a JSON of the form:\n",
      "  {\n",
-     "    \"name\": \"john\"\n",
+     "    \"name\": \"john\",\n",
      "    \"password\": \"PASSWORD\",\n",
      "    \"expires\": EXPIRES,\n",
      "    \"permissions\": PERMISSIONS\n",
      "  }\n",
      "where PASSWORD is given in plain text, EXPIRES is a unixtime,\n",
-     "in seconds, or as a rfc3339 string of a time in future, PERMISSIONS\n",
+     "in seconds, or as an rfc3339 string of a time in future, PERMISSIONS\n",
      "is either \"all\" or an array of any of\n",
      "[\"cluster_observer\", \"cluster_admin\", \"security\"].\n"
     ].
@@ -154,7 +155,7 @@ add_user_spec() ->
 add_user_cmd([_, _, _, UserDataPath], _, _) ->
     case file:read_file(UserDataPath) of
         {ok, Blob} ->
-            case riak_kv_wm_json:decode(Blob) of
+            case catch riak_kv_wm_json:decode(Blob) of
                 #{<<"name">> := Name,
                   <<"password">> := Password,
                   <<"expires">> := Expires_,
@@ -206,7 +207,7 @@ validate_expires(A) when is_integer(A) ->
         true ->
             invlaid;
         false ->
-            {valid, A}
+            {valid, A * 1000}
     end;
 validate_expires(A) when is_binary(A) ->
     try
