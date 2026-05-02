@@ -174,7 +174,7 @@ add_user_cmd([_, _, _, UserDataPath], _, _) ->
                                 ok ->
                                     [];
                                 {error, already_exists} ->
-                                    [clique_status_alert("Already exists")]
+                                    [clique_status_alert("User already exists")]
                             end;
                         _ ->
                             [clique_status_alert("Invalid user permissions or expiry")]
@@ -191,34 +191,39 @@ add_user_cmd([_, _, _, UserDataPath], _, _) ->
 validate_perms(<<"all">>) ->
     {valid, [cluster_observer, cluster_admin, security]};
 validate_perms(PP_) when is_list(PP_) ->
-    PP = [binary_to_atom(P) || P <- PP_, lists:member(P, ?ALL_PERMS)],
-    if length(PP) == length(PP_) ->
-            {valid, PP};
-       el/=se ->
-            invlaid
+    try
+        PP = [binary_to_existing_atom(P) || P <- PP_, lists:member(P, ?ALL_PERMS)],
+        if length(PP) == length(PP_) ->
+                {valid, PP};
+           el/=se ->
+                invalid
+        end
+    catch
+        _:_ ->
+            invalid
     end;
 validate_perms(_) ->
-    invlaid.
+    invalid.
 
 validate_expires(<<"never">>) ->
     {valid, never};
 validate_expires(A) when is_integer(A) ->
     case os:system_time(second) > A of
         true ->
-            invlaid;
+            invalid;
         false ->
             {valid, A * 1000}
     end;
 validate_expires(A) when is_binary(A) ->
     try
-        E = calendar:rfc3339_to_system_time(binary_to_list(A), [{unit, millisecond}]),
-        {valid, E}
+        E = calendar:rfc3339_to_system_time(binary_to_list(A), [{unit, second}]),
+        validate_expires(E)
     catch
         _:_ ->
-            invlaid
+            invalid
     end;
 validate_expires(_a) ->
-    invlaid.
+    invalid.
 
 
 del_user_usage() ->
