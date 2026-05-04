@@ -61,7 +61,7 @@ options(RD, Ctx) ->
     {riak_admin_api_web:cors_headers(), RD, Ctx}.
 
 -spec is_authorized(#wm_reqdata{}, #context{}) ->
-          {true|{halt, 401}, #wm_reqdata{}, #context{}}.
+          {true, #wm_reqdata{}, #context{}}.
 is_authorized(RD, Ctx) ->
     {true, wrq:set_resp_headers(riak_admin_api_web:cors_headers(), RD), Ctx}.
 

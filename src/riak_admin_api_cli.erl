@@ -222,7 +222,7 @@ validate_expires(A) when is_binary(A) ->
         _:_ ->
             invalid
     end;
-validate_expires(_a) ->
+validate_expires(_) ->
     invalid.
 
 

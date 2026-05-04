@@ -63,15 +63,22 @@ options(RD, Ctx) ->
 -spec is_authorized(#wm_reqdata{}, #context{}) ->
           {true|{halt, 401}, #wm_reqdata{}, #context{}}.
 is_authorized(RD, Ctx) ->
+    case wrq:method(RD) of
+        'OPTIONS' ->
+            {true, wrq:set_resp_headers(riak_admin_api_web:cors_headers(), RD), Ctx};
+        _ ->
+            is_authorized2(RD, Ctx)
+    end.
+is_authorized2(RD, Ctx) ->
     Request = riak_kv_wm_json:decode(wrq:req_body(RD)),
     RD1 = wrq:set_resp_headers(riak_admin_api_web:cors_headers(), RD),
     case extract_usercreds(RD) of
         undefined ->
             {{halt, 401}, RD1, Ctx};
         {Name, Creds} ->
-            is_authorized2(Name, Creds, RD1, Ctx#context{request = Request})
+            is_authorized3(Name, Creds, RD1, Ctx#context{request = Request})
         end.
-is_authorized2(Name, Creds, RD, Ctx = #context{request = #{<<"action">> := Action}}) ->
+is_authorized3(Name, Creds, RD, Ctx = #context{request = #{<<"action">> := Action}}) ->
     case riak_admin_api_ug:get_user(Name) of
         {error, notfound} ->
             {{halt, 401}, RD, Ctx};

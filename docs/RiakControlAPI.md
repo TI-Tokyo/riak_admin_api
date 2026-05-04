@@ -374,7 +374,44 @@ On error,
 ```
 
 
-VnodeGetStatus
+### VnodeGetStatus
+**Permissions required**: cluster\_observer.
+#### Parameters
+```
+{
+  "node": NODENAME,
+  "preflists": PREFLISTS
+}
+```
+PREFLISTS is a list of vnodes as strings (not integers) to fetch the
+status of, or \"all\", on node NODENAME.
+#### Response
+On success,
+```
+{"result": [PLSTATUS, ...]}
+```
+Each PLSTATUS has the following fields:
+```
+{
+  "counter": COUNTER,
+  "backend_status": {
+    "mod": BACKEND_NAME,
+    "status": BAKEND_STATUS,
+    "key_count": KEYCOUNT
+  },
+  "idx": IDX,
+  "vnodeid": VNODEID,
+  "counter_lease": COUNTER_LEASE,
+  "counter_lease_size": COUNTER_LEASE_SIZE,
+  "counter_leasing": COUNTER_LEASING
+}
+```
+
+On error,
+```
+{"error": ERROR_STRING}
+```
+
 TictacaaeGetStatus
 
 SystemGetVersionInfo

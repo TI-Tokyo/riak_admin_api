@@ -62,7 +62,7 @@ process_request(Request) ->
 select_preflists(All, <<"all">>) ->
     All;
 select_preflists(_All, Some) ->
-    Some.
+    [list_to_integer(A) || A <- Some].
 
 jsonify_vnode_status_list(AA) when is_list(AA) ->
     map_from_deep_list(
