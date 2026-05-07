@@ -20,7 +20,7 @@
 %%
 %% -------------------------------------------------------------------
 
--module(riak_admin_api_wm_ctl_version_info).
+-module(riak_admin_api_ag_ctl_version_info).
 
 -export([process_request/1]).
 

@@ -20,7 +20,7 @@
 %%
 %% -------------------------------------------------------------------
 
--module(riak_admin_api_wm_ctl_cluster).
+-module(riak_admin_api_ag_ctl_cluster).
 
 -export([process_request/1]).
 

@@ -21,7 +21,7 @@
 %%
 %% -------------------------------------------------------------------
 
--module(riak_admin_api_wm_ctl_security).
+-module(riak_admin_api_ag_ctl_security).
 
 -export([process_request/1]).
 

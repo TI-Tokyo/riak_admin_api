@@ -26,18 +26,19 @@
          permissions_for/1
         ]).
 
+-spec cors_headers() -> riak_api_web_headers:header_list().
 cors_headers() ->
-    [{"Access-Control-Allow-Origin", "*"},
-     {"Access-Control-Allow-Credentials", "true"},
-     {"Access-Control-Allow-Methods", "POST,OPTIONS"},
-     {"Access-Control-Allow-Headers",
-      "host,"
-      "origin,"
-      "authorization,"
-      "content-type,"
-      "content-md5,"
-      "accept,"
-      "accept-encoding"
+    [{<<"Access-Control-Allow-Origin">>, <<"*">>},
+     {<<"Access-Control-Allow-Credentials">>, "true"},
+     {<<"Access-Control-Allow-Methods">>, <<"POST,OPTIONS">>},
+     {<<"Access-Control-Allow-Headers">>,
+      <<"host,"
+        "origin,"
+        "authorization,"
+        "content-type,"
+        "content-md5,"
+        "accept,"
+        "accept-encoding">>
      }
     ].
 

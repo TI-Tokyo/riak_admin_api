@@ -20,7 +20,7 @@
 %%
 %% -------------------------------------------------------------------
 
--module(riak_admin_api_wm_ctl_vnode).
+-module(riak_admin_api_ag_ctl_vnode).
 
 -export([process_request/1]).
 
