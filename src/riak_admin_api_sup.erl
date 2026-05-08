@@ -53,8 +53,8 @@ init([]) ->
                 ],
             ChildSpecs =
                 [#{id => riak_admin_api_web,
-                   start => {webmachine_mochiweb, start, [WMConfig]},
-                   modules => [mochiweb_socket_server]}
+                   start => {riak_api_web_socket, start_link, [WMConfig]},
+                   modules => [riak_api_web_socket]}
                 ],
             {ok, {SupFlags, ChildSpecs}};
         _ ->
