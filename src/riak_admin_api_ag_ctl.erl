@@ -68,9 +68,9 @@ match_route(Method, Path, _) ->
 
 size_limits() ->
     {
-        32,
+        8,
         1024,
-        0
+        10 * 1024
     }.
 
 
