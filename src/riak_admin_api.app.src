@@ -9,9 +9,7 @@
     pbkdf2,
     riak_core,
     riak_kv,
-    riak_api,
-    mochiweb,
-    webmachine
+    riak_api
    ]},
   {env,[]},
   {modules, []},
