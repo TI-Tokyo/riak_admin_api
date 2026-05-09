@@ -50,4 +50,6 @@
 
 -define(ADMIN_MD_PREFIX, <<"admin_api">>).
 
+-define(MAX_REQ_SIZE, 10240).
+
 -endif.

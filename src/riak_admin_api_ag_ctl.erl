@@ -41,7 +41,8 @@
 -record(context, {method :: riak_api_web_acceptor:method(),
                   request :: undefined | map(),
                   creds :: undefined | map(),
-                  user :: undefined | user()}).
+                  user :: undefined | user(),
+                  req_body :: undefined | riak_api_web_body:req_body()}).
 
 -define(TXT_HEADER, {'Content-Type', <<"text/plain">>}).
 -define(JSN_HEADER, {'Content-Type', <<"application/json">>}).
@@ -55,12 +56,12 @@
     | {method_not_allowed, list(riak_api_web_acceptor:method())}
     | {ok, riak_api_web_handler:limits(), #context{}}.
 match_route(Method, Path, _) ->
-    case {string:trim(Path, both, "/"), Method} of
-        {"ctl", 'OPTIONS'} ->
+    case {Path, Method} of
+        {<<"/ctl">>, 'OPTIONS'} ->
             {ok, size_limits(), #context{method = Method}};
-        {"ctl", 'POST'} ->
+        {<<"/ctl">>, 'POST'} ->
             {ok, size_limits(), #context{method = Method}};
-        {"ctl", _} ->
+        {<<"/ctl">>, _} ->
             {method_not_allowed, ['POST', 'OPTIONS']};
         _ ->
             nomatch
@@ -158,11 +159,16 @@ process_request(ReqBody, Ctx0) ->
     end.
 
 authorize(ReqBody, Ctx) ->
-    case catch riak_kv_wm_json:decode(ReqBody) of
-        Request when is_map(Request) ->
-            authorize2(Ctx#context{request = Request});
-        _ ->
-            {halt, 400, <<"Malformed request">>, []}
+    case riak_api_web_body:get_body(ReqBody, all, ?MAX_REQ_SIZE) of
+        {error, content_too_large} ->
+            {halt, 413, [], <<>>, []};
+        {ObjBody, UpdReqBody} when is_binary(ObjBody) ->
+            case catch riak_kv_wm_json:decode(ObjBody) of
+                Request when is_map(Request) ->
+                    authorize2(Ctx#context{request = Request, req_body = UpdReqBody});
+                _w ->
+                    {halt, 400, [?TXT_HEADER], <<"Malformed request">>, []}
+            end
     end.
 authorize2(Ctx = #context{request = #{<<"action">> := Action},
                           user = ?USER{permissions = UserPermissions,
@@ -185,11 +191,17 @@ extract_usercreds(ReqHeaders) ->
     case riak_api_web_headers:get_value('Authorization', ReqHeaders) of
         undefined ->
             undefined;
-        <<"Basic ", Base64>> ->
-            UserPass = base64:decode_to_string(Base64),
-            [User, Pass] = [list_to_binary(X) || X <- string:tokens(UserPass, ":")],
-            {User, #{method => password,
-                     details => #{password => Pass}}}
+        <<"Basic ", Base64/binary>> ->
+            UserPass = list_to_binary(base64:decode_to_string(Base64)),
+            case binary:split(UserPass, <<":">>) of
+                [User, Pass] ->
+                    {User, #{method => password,
+                             details => #{password => Pass}}};
+                _ ->
+                    undefined
+            end;
+        _ ->
+            undefined
     end.
 
 intersect([], _) ->
@@ -200,7 +212,8 @@ intersect(AA, BB) ->
     lists:any(fun(A) -> lists:member(A, BB) end, AA).
 
 
-process_post(Ctx = #context{request = Request}) ->
+process_post(Ctx = #context{request = Request,
+                            req_body = ReqBody}) ->
     #{<<"action">> := Action} = Request,
     try
         case riak_admin_api_web:handler_mod(Action) of
@@ -212,8 +225,8 @@ process_post(Ctx = #context{request = Request}) ->
                         {ok,
                          {200,
                           riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
-                          riak_kv_wm_json:encode(#{result => Res}),
-                          true, none},
+                          iolist_to_binary(riak_kv_wm_json:encode(#{result => Res})),
+                          true, ReqBody},
                          Ctx};
                     {StatusCode, Err} ->
                         {halt, StatusCode,
@@ -223,6 +236,7 @@ process_post(Ctx = #context{request = Request}) ->
         end
     catch
         _t:_e:_st ->
+            ?LOG_NOTICE("~p:~p ~p", [_t, _e, _st]),
             {halt, 500,
              riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
              riak_kv_wm_json:encode(

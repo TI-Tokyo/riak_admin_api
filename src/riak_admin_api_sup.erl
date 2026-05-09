@@ -42,17 +42,17 @@ init([]) ->
     case application:get_env(riak_admin_api, admin_api_enabled) of
         {ok, true} ->
             {ok, [{Ip, Port}]} = application:get_env(riak_admin_api, https),
+            SMName = riak_api_web:spec_name(https, Ip, Port),
             WMConfig =
-                [{name, riak_api_web:spec_name(https, Ip, Port)},
+                [{name, SMName},
                  {ip, Ip},
                  {port, Port},
-                 {log_dir, app_helper:get_env(riak_core, platform_log_dir, "log")},
                  {ssl, true},
                  {ssl_opts, riak_api_ssl:options()},
                  {nodelay, true}
                 ],
             ChildSpecs =
-                [#{id => riak_admin_api_web,
+                [#{id => SMName,
                    start => {riak_api_web_socket, start_link, [WMConfig]},
                    modules => [riak_api_web_socket]}
                 ],
