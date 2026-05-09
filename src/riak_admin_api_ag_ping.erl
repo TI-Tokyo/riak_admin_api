@@ -42,7 +42,6 @@
 
 -define(TXT_HEADER, {'Content-Type', <<"text/plain">>}).
 
-
 -spec match_route(
     riak_api_web_acceptor:method(),
     unicode:chardata(),
@@ -70,7 +69,6 @@ size_limits() ->
         0
     }.
 
-
 -spec check_permissions(
     riak_api_web_headers:headers(),
     riak_api_web_socket:scheme(),
@@ -82,7 +80,6 @@ size_limits() ->
 check_permissions(_ReqHeaders, _Scheme, _Peer, _Cert, Ctx) ->
     {ok, Ctx}.
 
-
 -spec parse_query_params(
     riak_api_web_handler:query_params(),
     #context{}
@@ -93,7 +90,6 @@ parse_query_params([], Ctx) ->
 parse_query_params(_, _Ctx) ->
     {halt, 400, [?TXT_HEADER], <<"No request parameters acceptable">>, []}.
 
-
 -spec parse_request_headers(
     riak_api_web_headers:headers(),
     #context{}
@@ -101,7 +97,6 @@ parse_query_params(_, _Ctx) ->
     {ok, #context{}}.
 parse_request_headers(_ReqHeaders, Ctx) ->
     {ok, Ctx}.
-
 
 -spec process_request(
     riak_api_web_body:req_body() | none,
@@ -126,11 +121,10 @@ process_request(none, Ctx) ->
 process_request(_, _) ->
     {halt, 400, [?TXT_HEADER], <<"No request body acceptable">>, []}.
 
-
 -spec record_request(
     riak_api_web_handler:timings(),
     riak_api_web_handler:completion(),
-        #context{}
+    #context{}
 ) ->
     ok.
 record_request(_Timings, _Completion, _Ctx) ->

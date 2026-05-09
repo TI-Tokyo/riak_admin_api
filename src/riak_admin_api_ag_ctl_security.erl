@@ -29,40 +29,52 @@
 -include_lib("kernel/include/logger.hrl").
 
 -spec process_request(#{}) ->
-          {ok, binary() | map() | [map()]} | {400..500, binary()}.
+    {ok, binary() | map() | [map()]} | {400..500, binary()}.
 process_request(Request) ->
     Res =
         case Request of
             #{<<"action">> := <<"SecurityListUsers">>} ->
-                A = [ #{name => Name,
+                A = [
+                    #{
+                        name => Name,
                         created => Created,
                         modified => Modified,
                         expires => Expires,
                         groups => Groups,
                         auth_method => AuthMethod,
-                        permissions => Permissions}
-                      || {Name, ?USER{groups = Groups,
-                                      created = Created,
-                                      modified = Modified,
-                                      expires = Expires,
-                                      permissions = Permissions,
-                                      auth_details = #{method := AuthMethod}}}
-                             <- riak_admin_api_ug:list_users() ],
+                        permissions => Permissions
+                    }
+                 || {Name, ?USER{
+                        groups = Groups,
+                        created = Created,
+                        modified = Modified,
+                        expires = Expires,
+                        permissions = Permissions,
+                        auth_details = #{method := AuthMethod}
+                    }} <-
+                        riak_admin_api_ug:list_users()
+                ],
                 {ok, A};
-
-            #{<<"action">> := <<"SecurityCreateUser">>,
-              <<"params">> := #{<<"name">> := Name,
-                                <<"options">> := Options}} ->
+            #{
+                <<"action">> := <<"SecurityCreateUser">>,
+                <<"params">> := #{
+                    <<"name">> := Name,
+                    <<"options">> := Options
+                }
+            } ->
                 case make_user(Options) of
                     {ok, User} ->
                         riak_admin_api_ug:add_user(Name, User);
                     ER ->
                         ER
                 end;
-
-            #{<<"action">> := <<"SecuritySetUserExpiry">>,
-              <<"params">> := #{<<"name">> := Name,
-                                <<"expires">> := Expires_}} ->
+            #{
+                <<"action">> := <<"SecuritySetUserExpiry">>,
+                <<"params">> := #{
+                    <<"name">> := Name,
+                    <<"expires">> := Expires_
+                }
+            } ->
                 try
                     Expires =
                         case Expires_ of
@@ -76,87 +88,113 @@ process_request(Request) ->
                     error:badarg ->
                         {error, invalid_arg}
                 end;
-
-            #{<<"action">> := <<"SecurityDeleteUser">>,
-              <<"params">> := #{<<"name">> := Name}} ->
+            #{
+                <<"action">> := <<"SecurityDeleteUser">>,
+                <<"params">> := #{<<"name">> := Name}
+            } ->
                 riak_admin_api_ug:del_user(Name);
-
             #{<<"action">> := <<"SecurityListGroups">>} ->
-                A = [ #{name => Name,
+                A = [
+                    #{
+                        name => Name,
                         created => Created,
                         modified => Modified,
-                        permissions => Permissions}
-                      || {Name, ?GROUP{created = Created,
-                                       modified = Modified,
-                                       permissions = Permissions}}
-                             <- riak_admin_api_ug:list_groups() ],
+                        permissions => Permissions
+                    }
+                 || {Name, ?GROUP{
+                        created = Created,
+                        modified = Modified,
+                        permissions = Permissions
+                    }} <-
+                        riak_admin_api_ug:list_groups()
+                ],
                 {ok, A};
-
-            #{<<"action">> := <<"SecurityCreateGroup">>,
-              <<"params">> := #{<<"name">> := Name,
-                                <<"options">> := Options}} ->
+            #{
+                <<"action">> := <<"SecurityCreateGroup">>,
+                <<"params">> := #{
+                    <<"name">> := Name,
+                    <<"options">> := Options
+                }
+            } ->
                 case make_group(Options) of
                     {ok, Group} ->
                         riak_admin_api_ug:add_group(Name, Group);
                     ER ->
                         ER
                 end;
-
-            #{<<"action">> := <<"SecurityDeleteGroup">>,
-              <<"params">> := #{<<"name">> := Name}} ->
+            #{
+                <<"action">> := <<"SecurityDeleteGroup">>,
+                <<"params">> := #{<<"name">> := Name}
+            } ->
                 riak_admin_api_ug:del_group(Name);
-
-            #{<<"action">> := <<"SecurityAddUserGroups">>,
-              <<"params">> := #{<<"user">> := User,
-                                <<"groups">> := Groups}} ->
+            #{
+                <<"action">> := <<"SecurityAddUserGroups">>,
+                <<"params">> := #{
+                    <<"user">> := User,
+                    <<"groups">> := Groups
+                }
+            } ->
                 riak_admin_api_ug:add_user_groups(User, Groups);
-
-            #{<<"action">> := <<"SecurityDeleteUserGroups">>,
-              <<"params">> := #{<<"user">> := User,
-                                <<"groups">> := Groups}} ->
+            #{
+                <<"action">> := <<"SecurityDeleteUserGroups">>,
+                <<"params">> := #{
+                    <<"user">> := User,
+                    <<"groups">> := Groups
+                }
+            } ->
                 riak_admin_api_ug:del_user_groups(User, Groups);
-
-            #{<<"action">> := <<"SecurityAddUserPermissions">>,
-              <<"params">> := #{<<"user">> := User,
-                                <<"permissions">> := Perms_}} ->
+            #{
+                <<"action">> := <<"SecurityAddUserPermissions">>,
+                <<"params">> := #{
+                    <<"user">> := User,
+                    <<"permissions">> := Perms_
+                }
+            } ->
                 case lists:foldl(fun validate_permission_/2, [], Perms_) of
                     [] ->
                         {error, invalid_arg};
                     Perms ->
                         riak_admin_api_ug:add_user_permissions(User, Perms)
                 end;
-
-            #{<<"action">> := <<"SecurityDeleteUserPermissions">>,
-              <<"params">> := #{<<"user">> := User,
-                                <<"permissions">> := Perms_}} ->
+            #{
+                <<"action">> := <<"SecurityDeleteUserPermissions">>,
+                <<"params">> := #{
+                    <<"user">> := User,
+                    <<"permissions">> := Perms_
+                }
+            } ->
                 case lists:foldl(fun validate_permission_/2, [], Perms_) of
                     [] ->
                         {error, invalid_arg};
                     Perms ->
                         riak_admin_api_ug:del_user_permissions(User, Perms)
                 end;
-
-            #{<<"action">> := <<"SecurityAddGroupPermissions">>,
-              <<"params">> := #{<<"group">> := Group,
-                                <<"permissions">> := Perms_}} ->
+            #{
+                <<"action">> := <<"SecurityAddGroupPermissions">>,
+                <<"params">> := #{
+                    <<"group">> := Group,
+                    <<"permissions">> := Perms_
+                }
+            } ->
                 case lists:foldl(fun validate_permission_/2, [], Perms_) of
                     [] ->
                         {error, invalid_arg};
                     Perms ->
                         riak_admin_api_ug:add_group_permissions(Group, Perms)
                 end;
-
-            #{<<"action">> := <<"SecurityDeleteGroupPermissions">>,
-              <<"params">> := #{<<"group">> := Group,
-                                <<"permissions">> := Perms_}} ->
+            #{
+                <<"action">> := <<"SecurityDeleteGroupPermissions">>,
+                <<"params">> := #{
+                    <<"group">> := Group,
+                    <<"permissions">> := Perms_
+                }
+            } ->
                 case lists:foldl(fun validate_permission_/2, [], Perms_) of
                     [] ->
                         {error, invalid_arg};
                     Perms ->
                         riak_admin_api_ug:del_group_permissions(Group, Perms)
                 end;
-
-
             #{<<"action">> := <<"SecurityListPermissions">>} ->
                 {ok, [atom_to_binary(P) || P <- riak_admin_api_ug:all_permissions()]}
         end,
@@ -176,9 +214,14 @@ process_request(Request) ->
             {400, <<"Invalid parameter">>}
     end.
 
-
-make_user(#{<<"auth_details">> := #{<<"method">> := <<"password">>,
-                                    <<"password">> := Password}} = Options) ->
+make_user(
+    #{
+        <<"auth_details">> := #{
+            <<"method">> := <<"password">>,
+            <<"password">> := Password
+        }
+    } = Options
+) ->
     Now = os:system_time(millisecond),
     try
         Expires =
@@ -189,14 +232,20 @@ make_user(#{<<"auth_details">> := #{<<"method">> := <<"password">>,
                     binary_to_integer(Defined)
             end,
         {Hash, Salt} = riak_admin_api_auth:hash_password(Password),
-        {ok, ?USER{auth_details = #{method => password,
-                                    details => #{password_hash => Hash,
-                                                 salt => Salt}},
-                   groups = [],
-                   permissions = [],
-                   created = Now,
-                   modified = Now,
-                   expires = Expires}}
+        {ok, ?USER{
+            auth_details = #{
+                method => password,
+                details => #{
+                    password_hash => Hash,
+                    salt => Salt
+                }
+            },
+            groups = [],
+            permissions = [],
+            created = Now,
+            modified = Now,
+            expires = Expires
+        }}
     catch
         error:badarg ->
             {error, invalid_arg}
@@ -206,12 +255,13 @@ make_user(_) ->
 
 make_group(#{}) ->
     Now = os:system_time(millisecond),
-    {ok, ?GROUP{created = Now,
-                modified = Now,
-                permissions = []}};
+    {ok, ?GROUP{
+        created = Now,
+        modified = Now,
+        permissions = []
+    }};
 make_group(_) ->
     {error, invalid_spec}.
-
 
 validate_permission_(<<"cluster_observer">>, Q) -> [cluster_observer | Q];
 validate_permission_(<<"cluster_admin">>, Q) -> [cluster_admin | Q];

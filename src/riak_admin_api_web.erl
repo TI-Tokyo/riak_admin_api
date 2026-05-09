@@ -21,27 +21,28 @@
 %% -------------------------------------------------------------------
 -module(riak_admin_api_web).
 
--export([cors_headers/0,
-         handler_mod/1,
-         permissions_for/1
-        ]).
+-export([
+    cors_headers/0,
+    handler_mod/1,
+    permissions_for/1
+]).
 
 -spec cors_headers() -> riak_api_web_headers:header_list().
 cors_headers() ->
-    [{<<"Access-Control-Allow-Origin">>, <<"*">>},
-     {<<"Access-Control-Allow-Credentials">>, "true"},
-     {<<"Access-Control-Allow-Methods">>, <<"POST,OPTIONS">>},
-     {<<"Access-Control-Allow-Headers">>,
-      <<"host,"
-        "origin,"
-        "authorization,"
-        "content-type,"
-        "content-md5,"
-        "accept,"
-        "accept-encoding">>
-     }
+    [
+        {<<"Access-Control-Allow-Origin">>, <<"*">>},
+        {<<"Access-Control-Allow-Credentials">>, "true"},
+        {<<"Access-Control-Allow-Methods">>, <<"POST,OPTIONS">>},
+        {<<"Access-Control-Allow-Headers">>, <<
+            "host,"
+            "origin,"
+            "authorization,"
+            "content-type,"
+            "content-md5,"
+            "accept,"
+            "accept-encoding"
+        >>}
     ].
-
 
 handler_mod(<<"ClusterGetStatus">>) -> riak_admin_api_ag_ctl_cluster;
 handler_mod(<<"ClusterClearPlan">>) -> riak_admin_api_ag_ctl_cluster;
@@ -58,12 +59,9 @@ handler_mod(<<"NodePutAppEnv">>) -> riak_admin_api_ag_ctl_cluster;
 handler_mod(<<"NodeGetAdvancedConfig">>) -> riak_admin_api_ag_ctl_cluster;
 handler_mod(<<"NodePutAdvancedConfig">>) -> riak_admin_api_ag_ctl_cluster;
 handler_mod(<<"NodeRestart">>) -> riak_admin_api_ag_ctl_cluster;
-
 handler_mod(<<"VnodeGetStatus">>) -> riak_admin_api_ag_ctl_vnode;
 handler_mod(<<"TictacaaeGetStatus">>) -> riak_admin_api_ag_ctl_tictacaae;
-
 handler_mod(<<"SystemGetVersionInfo">>) -> riak_admin_api_ag_ctl_version_info;
-
 handler_mod(<<"SecurityListUsers">>) -> riak_admin_api_ag_ctl_security;
 handler_mod(<<"SecurityCreateUser">>) -> riak_admin_api_ag_ctl_security;
 handler_mod(<<"SecuritySetUserExpiry">>) -> riak_admin_api_ag_ctl_security;
@@ -78,9 +76,7 @@ handler_mod(<<"SecurityDeleteUserPermissions">>) -> riak_admin_api_ag_ctl_securi
 handler_mod(<<"SecurityAddGroupPermissions">>) -> riak_admin_api_ag_ctl_security;
 handler_mod(<<"SecurityDeleteGroupPermissions">>) -> riak_admin_api_ag_ctl_security;
 handler_mod(<<"SecurityListPermissions">>) -> riak_admin_api_ag_ctl_security;
-
 handler_mod(_) -> undefined.
-
 
 permissions_for(<<"ClusterGetStatus">>) -> [cluster_observer];
 permissions_for(<<"ClusterClearPlan">>) -> [cluster_observer, cluster_admin];
@@ -97,12 +93,9 @@ permissions_for(<<"NodePutAppEnv">>) -> [cluster_observer, cluster_admin];
 permissions_for(<<"NodeGetAdvancedConfig">>) -> [cluster_observer, cluster_admin];
 permissions_for(<<"NodePutAdvancedConfig">>) -> [cluster_observer, cluster_admin];
 permissions_for(<<"NodeRestart">>) -> [cluster_observer, cluster_admin];
-
 permissions_for(<<"VnodeGetStatus">>) -> [cluster_observer];
 permissions_for(<<"TictacaaeGetStatus">>) -> [cluster_observer];
-
 permissions_for(<<"SystemGetVersionInfo">>) -> [];
-
 permissions_for(<<"SecurityListUsers">>) -> [security];
 permissions_for(<<"SecurityCreateUser">>) -> [security];
 permissions_for(<<"SecuritySetUserExpiry">>) -> [security];
@@ -117,5 +110,4 @@ permissions_for(<<"SecurityDeleteUserPermissions">>) -> [security];
 permissions_for(<<"SecurityAddGroupPermissions">>) -> [security];
 permissions_for(<<"SecurityDeleteGroupPermissions">>) -> [security];
 permissions_for(<<"SecurityListPermissions">>) -> [security];
-
 permissions_for(_) -> [].

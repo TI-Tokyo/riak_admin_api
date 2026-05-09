@@ -27,7 +27,7 @@
 -include_lib("kernel/include/logger.hrl").
 
 -spec process_request(#{}) ->
-          {ok, binary() | map()} | {400..500, binary()}.
+    {ok, binary() | map()} | {400..500, binary()}.
 process_request(Request) ->
     Res =
         case Request of
@@ -37,9 +37,10 @@ process_request(Request) ->
                 riak_core_claimant:clear();
             #{<<"action">> := <<"ClusterCommitPlan">>} ->
                 riak_core_claimant:commit();
-
-            #{<<"action">> := <<"ClusterStageJoin">>,
-              <<"params">> := #{<<"node">> := A}} ->
+            #{
+                <<"action">> := <<"ClusterStageJoin">>,
+                <<"params">> := #{<<"node">> := A}
+            } ->
                 Node = binary_to_atom(A),
                 {ok, Ring} = riak_core_ring_manager:get_my_ring(),
                 case riak_core_ring:all_members(Ring) of
@@ -50,32 +51,48 @@ process_request(Request) ->
                             X -> X
                         catch
                             exit:R ->
-                                ?LOG_WARNING("staged_join on ~s failed: ~p",
-                                             [Node, R]),
+                                ?LOG_WARNING(
+                                    "staged_join on ~s failed: ~p",
+                                    [Node, R]
+                                ),
                                 {badrpc, nodedown}
                         end
                 end;
-            #{<<"action">> := <<"ClusterStageLeave">>,
-              <<"params">> := #{<<"node">> := A}} ->
+            #{
+                <<"action">> := <<"ClusterStageLeave">>,
+                <<"params">> := #{<<"node">> := A}
+            } ->
                 riak_core_claimant:leave_member(binary_to_atom(A));
-            #{<<"action">> := <<"ClusterStageRemove">>,
-              <<"params">> := #{<<"node">> := A}} ->
+            #{
+                <<"action">> := <<"ClusterStageRemove">>,
+                <<"params">> := #{<<"node">> := A}
+            } ->
                 riak_core_claimant:remove_member(binary_to_atom(A));
-            #{<<"action">> := <<"ClusterStageReplace">>,
-              <<"params">> := #{<<"node">> := A1,
-                                <<"with">> := A2}} ->
+            #{
+                <<"action">> := <<"ClusterStageReplace">>,
+                <<"params">> := #{
+                    <<"node">> := A1,
+                    <<"with">> := A2
+                }
+            } ->
                 riak_core_claimant:replace(binary_to_atom(A1), binary_to_atom(A2));
-            #{<<"action">> := <<"ClusterStageForceReplace">>,
-              <<"params">> := #{<<"node">> := A1,
-                                <<"with">> := A2}} ->
+            #{
+                <<"action">> := <<"ClusterStageForceReplace">>,
+                <<"params">> := #{
+                    <<"node">> := A1,
+                    <<"with">> := A2
+                }
+            } ->
                 riak_core_claimant:force_replace(binary_to_atom(A1), binary_to_atom(A2));
-
-            #{<<"action">> := <<"ClusterDownNode">>,
-              <<"params">> := #{<<"node">> := A}} ->
+            #{
+                <<"action">> := <<"ClusterDownNode">>,
+                <<"params">> := #{<<"node">> := A}
+            } ->
                 riak_core:down(binary_to_atom(A));
-
-            #{<<"action">> := <<"ClusterStopNode">>,
-              <<"params">> := #{<<"node">> := A}} ->
+            #{
+                <<"action">> := <<"ClusterStopNode">>,
+                <<"params">> := #{<<"node">> := A}
+            } ->
                 Node = binary_to_atom(A),
                 try rpc:call(Node, riak_core, stop, []) of
                     X -> X
@@ -84,33 +101,48 @@ process_request(Request) ->
                         ?LOG_WARNING("node stop on ~s failed: ~p", [Node, R]),
                         {badrpc, nodedown}
                 end;
-
-            #{<<"action">> := <<"NodeGetAppEnv">>,
-              <<"params">> := #{<<"node">> := A}} ->
+            #{
+                <<"action">> := <<"NodeGetAppEnv">>,
+                <<"params">> := #{<<"node">> := A}
+            } ->
                 AllAppEnvs = collect_app_env(binary_to_atom(A)),
                 {ok, iolist_to_binary(io_lib:format("~120p", [AllAppEnvs]))};
-            #{<<"action">> := <<"NodePutAppEnv">>,
-              <<"params">> := #{<<"node">> := A,
-                                <<"config">> := B}} ->
+            #{
+                <<"action">> := <<"NodePutAppEnv">>,
+                <<"params">> := #{
+                    <<"node">> := A,
+                    <<"config">> := B
+                }
+            } ->
                 apply_app_env(binary_to_atom(A), B);
-            #{<<"action">> := <<"NodeGetAdvancedConfig">>,
-              <<"params">> := #{<<"node">> := A}} ->
+            #{
+                <<"action">> := <<"NodeGetAdvancedConfig">>,
+                <<"params">> := #{<<"node">> := A}
+            } ->
                 {ok, AdvConfig} = get_advanced_config(binary_to_atom(A)),
                 {ok, iolist_to_binary(io_lib:format("~120p", [AdvConfig]))};
-            #{<<"action">> := <<"NodePutAdvancedConfig">>,
-              <<"params">> := #{<<"node">> := A,
-                                <<"config">> := B}} ->
+            #{
+                <<"action">> := <<"NodePutAdvancedConfig">>,
+                <<"params">> := #{
+                    <<"node">> := A,
+                    <<"config">> := B
+                }
+            } ->
                 write_advanced_config(binary_to_atom(A), B);
-
-            #{<<"action">> := <<"NodeRestart">>,
-              <<"params">> := #{<<"node">> := A}} ->
+            #{
+                <<"action">> := <<"NodeRestart">>,
+                <<"params">> := #{<<"node">> := A}
+            } ->
                 ok = signal_restart(binary_to_atom(A)),
                 spawn(
-                  fun() ->
-                          timer:sleep(3000 + 2000),
-                          ?LOG_NOTICE("For restart via riak_cnotrol to work,"
-                                      " make sure riak-deadmanshand is running")
-                  end),
+                    fun() ->
+                        timer:sleep(3000 + 2000),
+                        ?LOG_NOTICE(
+                            "For restart via riak_cnotrol to work,"
+                            " make sure riak-deadmanshand is running"
+                        )
+                    end
+                ),
                 ok;
             #{<<"action">> := A} ->
                 {400, iolist_to_binary([<<"Missing request parameters for action ">>, A])}
@@ -148,17 +180,22 @@ process_request(Request) ->
         {error, {bad_config, Extra}} ->
             {400, iolist_to_binary([<<"Bad config: ">>, Extra])};
         {error, PoorlyUnderstoodReason} ->
-            ?LOG_WARNING("Error serving cluster request ~p: ~p",
-                         [Request, PoorlyUnderstoodReason]),
+            ?LOG_WARNING(
+                "Error serving cluster request ~p: ~p",
+                [Request, PoorlyUnderstoodReason]
+            ),
             #{<<"action">> := Action} = Request,
-            {500, iolist_to_binary(
-                    [<<"Unexpected error while processing wm_ctl request ">>,
-                     Action,
-                     <<". Check logs around ">>,
-                     calendar:system_time_to_rfc3339(erlang:system_time(second)),
-                     <<" and report.">>])}
+            {500,
+                iolist_to_binary(
+                    [
+                        <<"Unexpected error while processing wm_ctl request ">>,
+                        Action,
+                        <<". Check logs around ">>,
+                        calendar:system_time_to_rfc3339(erlang:system_time(second)),
+                        <<" and report.">>
+                    ]
+                )}
     end.
-
 
 get_cluster() ->
     {ok, Ring} = riak_core_ring_manager:get_my_ring(),
@@ -166,34 +203,56 @@ get_cluster() ->
     Nodes = get_nodes(Ring),
     {DownNodes, Pending_} = riak_core_status:transfers(),
     Pending = lists:map(
-                fun({waiting_to_handoff, Node, Cnt}) ->
-                        #{node => Node,
-                          state => waiting_to_handoff,
-                          count => Cnt};
-                   ({stopped, Node, Cnt}) ->
-                        #{node => Node,
-                          state => stopped,
-                          count => Cnt}
-                end, Pending_),
+        fun
+            ({waiting_to_handoff, Node, Cnt}) ->
+                #{
+                    node => Node,
+                    state => waiting_to_handoff,
+                    count => Cnt
+                };
+            ({stopped, Node, Cnt}) ->
+                #{
+                    node => Node,
+                    state => stopped,
+                    count => Cnt
+                }
+        end,
+        Pending_
+    ),
 
     case get_plan() of
         {ok, Changes_, Claim} ->
-            Current = [jsonify_current_node(
-                         apply_status_change(Node, Changes_),
-                         Claimant,
-                         riak_core_node_watcher:services(proplists:get_value(node, Node)))
-                       || Node <- Nodes],
-            Final = [#{name => Name,
-                       ring_pct => P1,
-                       pending_pct => P2} || {Name, {P1, P2}} <- Claim],
-            Changes = [#{name => Name,
-                         action => Action} || {Name, Action} <- Changes_],
+            Current = [
+                jsonify_current_node(
+                    apply_status_change(Node, Changes_),
+                    Claimant,
+                    riak_core_node_watcher:services(proplists:get_value(node, Node))
+                )
+             || Node <- Nodes
+            ],
+            Final = [
+                #{
+                    name => Name,
+                    ring_pct => P1,
+                    pending_pct => P2
+                }
+             || {Name, {P1, P2}} <- Claim
+            ],
+            Changes = [
+                #{
+                    name => Name,
+                    action => Action
+                }
+             || {Name, Action} <- Changes_
+            ],
 
-            Res = #{current_cluster => Current,
-                    staged_changes => Changes,
-                    final_cluster => Final,
-                    down_nodes => DownNodes,
-                    transfers => Pending},
+            Res = #{
+                current_cluster => Current,
+                staged_changes => Changes,
+                final_cluster => Final,
+                down_nodes => DownNodes,
+                transfers => Pending
+            },
 
             {ok, Res};
         {error, _} = ER ->
@@ -217,29 +276,33 @@ jsonify_current_node(Node, Claimant, Services) ->
     MemTotal = proplists:get_value(mem_total, Node, null),
     Reachable = proplists:get_value(reachable, Node, false),
     LowMem = low_mem(Reachable, MemUsed, MemTotal, LWM),
-    if Reachable ->
-            #{name => proplists:get_value(node, Node),
-              status => proplists:get_value(status, Node),
-              system_info => proplists:get_value(system_info, Node),
-              reachable => Reachable,
-              services => Services,
-              ring_pct => proplists:get_value(ring_pct, Node),
-              pending_pct => proplists:get_value(pending_pct, Node),
-              mem_total => MemTotal,
-              mem_used => MemUsed,
-              mem_erlang => proplists:get_value(mem_erlang, Node),
-              low_mem => LowMem,
-              is_me => (proplists:get_value(node, Node) == node()),
-              claimant => (proplists:get_value(node, Node) == Claimant),
-              staged_action => proplists:get_value(action, Node, null),
-              replacement => proplists:get_value(replacement, Node, null)};
-       el/=se ->
-            #{name => proplists:get_value(node, Node),
-              status => proplists:get_value(status, Node),
-              reachable => Reachable,
-              is_me => false}
+    if
+        Reachable ->
+            #{
+                name => proplists:get_value(node, Node),
+                status => proplists:get_value(status, Node),
+                system_info => proplists:get_value(system_info, Node),
+                reachable => Reachable,
+                services => Services,
+                ring_pct => proplists:get_value(ring_pct, Node),
+                pending_pct => proplists:get_value(pending_pct, Node),
+                mem_total => MemTotal,
+                mem_used => MemUsed,
+                mem_erlang => proplists:get_value(mem_erlang, Node),
+                low_mem => LowMem,
+                is_me => (proplists:get_value(node, Node) == node()),
+                claimant => (proplists:get_value(node, Node) == Claimant),
+                staged_action => proplists:get_value(action, Node, null),
+                replacement => proplists:get_value(replacement, Node, null)
+            };
+        el /= se ->
+            #{
+                name => proplists:get_value(node, Node),
+                status => proplists:get_value(status, Node),
+                reachable => Reachable,
+                is_me => false
+            }
     end.
-
 
 get_nodes(Ring) ->
     Members = riak_core_ring:all_member_status(Ring),
@@ -254,14 +317,18 @@ get_member_info({Node, Status}, Ring) ->
 
     case rpc:call(Node, riak_kv_util, node_info_for_riak_control, []) of
         {badrpc, _} ->
-            [{node, Node},
-             {status, down}];
+            [
+                {node, Node},
+                {status, down}
+            ];
         MemberInfo ->
-            MemberInfo ++ [{node, Node},
-                           {status, Status},
-                           {ring_pct, PctRing},
-                           {pending_pct, PctPending}
-                          ]
+            MemberInfo ++
+                [
+                    {node, Node},
+                    {status, Status},
+                    {ring_pct, PctRing},
+                    {pending_pct, PctPending}
+                ]
     end.
 
 low_mem(_Reachable = false, _, _, _) ->
@@ -271,9 +338,8 @@ low_mem(true, MemUsed, MemTotal, LWM) ->
         undefined ->
             false;
         _ ->
-            1.0 - (MemUsed/MemTotal) < LWM
+            1.0 - (MemUsed / MemTotal) < LWM
     end.
-
 
 get_plan() ->
     try riak_core_claimant:plan() of
@@ -297,9 +363,10 @@ compute_final_ring_claim(Rings) ->
 
 nodes_and_claim_percentages(Ring) ->
     Nodes = lists:keysort(2, riak_core_ring:all_member_status(Ring)),
-    [{Name, riak_core_console:pending_claim_percentage(Ring, Name)} ||
-        {Name, _} <- Nodes].
-
+    [
+        {Name, riak_core_console:pending_claim_percentage(Ring, Name)}
+     || {Name, _} <- Nodes
+    ].
 
 collect_app_env(Node) when Node == node() ->
     riak_kv_util:collect_all_app_env();
@@ -307,9 +374,16 @@ collect_app_env(Node) ->
     rpc:call(Node, riak_kv_util, collect_all_app_env, []).
 
 apply_app_env(Node, AppEE_s) ->
-    case erl_parse:parse_term(
-           element(2, erl_scan:string(
-                        binary_to_list(AppEE_s) ++ "."))) of
+    case
+        erl_parse:parse_term(
+            element(
+                2,
+                erl_scan:string(
+                    binary_to_list(AppEE_s) ++ "."
+                )
+            )
+        )
+    of
         {ok, AppEE} ->
             apply_app_env2(Node, AppEE);
         {error, BadTerm} ->
@@ -326,9 +400,16 @@ get_advanced_config(Node) ->
     rpc:call(Node, riak_kv_util, get_advanced_config, []).
 
 write_advanced_config(Node, Blob) ->
-    case erl_parse:parse_term(
-           element(2, erl_scan:string(
-                        binary_to_list(Blob) ++ "."))) of
+    case
+        erl_parse:parse_term(
+            element(
+                2,
+                erl_scan:string(
+                    binary_to_list(Blob) ++ "."
+                )
+            )
+        )
+    of
         {ok, EE} when is_list(EE) ->
             write_advanced_config2(Node, iolist_to_binary([Blob, $.]));
         {error, BadTerm} ->
@@ -338,7 +419,6 @@ write_advanced_config2(Node, Blob) when Node == node() ->
     riak_kv_util:write_advanced_config(Blob);
 write_advanced_config2(Node, Blob) ->
     rpc:call(Node, riak_kv_util, write_advanced_config, [Blob]).
-
 
 signal_restart(Node) when Node == node() ->
     riak:deadmanshand_restart();

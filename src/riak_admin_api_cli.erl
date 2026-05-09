@@ -42,52 +42,62 @@ register_all_usage() ->
 
 register_all_commands() ->
     lists:foreach(
-      fun(Args) -> apply(clique, register_command, Args) end,
-      [status0_spec(),
-       status1_spec(),
-       add_user_spec(),
-       del_user_spec(),
-       list_users_spec(),
-       reset_spec()
-      ]).
+        fun(Args) -> apply(clique, register_command, Args) end,
+        [
+            status0_spec(),
+            status1_spec(),
+            add_user_spec(),
+            del_user_spec(),
+            list_users_spec(),
+            reset_spec()
+        ]
+    ).
 
 main_usage() ->
-    ["riak admin admin-api { status | add-user | del-user\n"
-     "                            | list-users | reset }\n",
-     "\n",
-     "Commands to control HTTP admin API.\n",
-     "See individual subcommand usage for options and arguments\n"
+    [
+        "riak admin admin-api { status | add-user | del-user\n"
+        "                            | list-users | reset }\n",
+        "\n",
+        "Commands to control HTTP admin API.\n",
+        "See individual subcommand usage for options and arguments\n"
     ].
 
 status_usage() ->
-    ["riak admin admin-api status [enable | disable]\n",
-     "\n",
-     "Without arguments, shows whether the HTTP Admin API subsystem can be,\n",
-     "and is effectively, enabled, as well as number of users and groups.\n",
-     "With \"enable\" or \"disable\", attempts to turn it on or off.\n",
-     "Note that if the riak.conf setting `admin_api_enabled` is set to `false`,\n",
-     "it cannot be enabled.\n"
+    [
+        "riak admin admin-api status [enable | disable]\n",
+        "\n",
+        "Without arguments, shows whether the HTTP Admin API subsystem can be,\n",
+        "and is effectively, enabled, as well as number of users and groups.\n",
+        "With \"enable\" or \"disable\", attempts to turn it on or off.\n",
+        "Note that if the riak.conf setting `admin_api_enabled` is set to `false`,\n",
+        "it cannot be enabled.\n"
     ].
 
 status0_spec() ->
-    [["riak-admin", "admin-api", "status"],
-     '_', [],
-     fun status_cmd/3
+    [
+        ["riak-admin", "admin-api", "status"],
+        '_',
+        [],
+        fun status_cmd/3
     ].
 status1_spec() ->
-    [["riak-admin", "admin-api", "status", '*'],
-     '_', [],
-     fun status_cmd/3
+    [
+        ["riak-admin", "admin-api", "status", '*'],
+        '_',
+        [],
+        fun status_cmd/3
     ].
 
 status_cmd([_, _, _], _, _Options) ->
     {Effective, Extra} = riak_admin_api:status(),
     Rows =
-        [[{effective, Effective},
-          {enabled_in_riak_conf, proplists:get_value(enabled_in_riak_conf, Extra)},
-          {users, proplists:get_value(users, Extra)},
-          {groups, proplists:get_value(groups, Extra)}
-         ]
+        [
+            [
+                {effective, Effective},
+                {enabled_in_riak_conf, proplists:get_value(enabled_in_riak_conf, Extra)},
+                {users, proplists:get_value(users, Extra)},
+                {groups, proplists:get_value(groups, Extra)}
+            ]
         ],
     [clique_status:table(Rows)];
 status_cmd([_, _, _, "enable"], _, _) ->
@@ -111,8 +121,6 @@ status_cmd([_, _, _, "disable"], _, _) ->
 status_cmd([_, _, _ | _], _, _) ->
     clique_status:usage().
 
-
-
 main(Fun, A, B, C) ->
     case riak_admin_api:is_effective() of
         true ->
@@ -128,48 +136,58 @@ main(Fun, A, B, C) ->
     end.
 
 add_user_usage() ->
-    ["riak admin admin-api add-user PATH\n",
-     "\n",
-     "Add a user, reading user specs from a file.\n",
-     "This is the way to add an initial superuser.\n",
-     "\n",
-     "The file read at PATH should be a JSON of the form:\n",
-     "  {\n",
-     "    \"name\": \"john\",\n",
-     "    \"password\": \"PASSWORD\",\n",
-     "    \"expires\": EXPIRES,\n",
-     "    \"permissions\": PERMISSIONS\n",
-     "  }\n",
-     "where PASSWORD is given in plain text, EXPIRES is a unixtime,\n",
-     "in seconds, or as an rfc3339 string of a time in future, PERMISSIONS\n",
-     "is either \"all\" or an array of any of\n",
-     "[\"cluster_observer\", \"cluster_admin\", \"security\"].\n"
+    [
+        "riak admin admin-api add-user PATH\n",
+        "\n",
+        "Add a user, reading user specs from a file.\n",
+        "This is the way to add an initial superuser.\n",
+        "\n",
+        "The file read at PATH should be a JSON of the form:\n",
+        "  {\n",
+        "    \"name\": \"john\",\n",
+        "    \"password\": \"PASSWORD\",\n",
+        "    \"expires\": EXPIRES,\n",
+        "    \"permissions\": PERMISSIONS\n",
+        "  }\n",
+        "where PASSWORD is given in plain text, EXPIRES is a unixtime,\n",
+        "in seconds, or as an rfc3339 string of a time in future, PERMISSIONS\n",
+        "is either \"all\" or an array of any of\n",
+        "[\"cluster_observer\", \"cluster_admin\", \"security\"].\n"
     ].
 
 add_user_spec() ->
-    [["riak-admin", "admin-api", "add-user", '*'],
-     '_', [],
-     fun(A, B, C) -> main(fun add_user_cmd/3, A, B, C) end
+    [
+        ["riak-admin", "admin-api", "add-user", '*'],
+        '_',
+        [],
+        fun(A, B, C) -> main(fun add_user_cmd/3, A, B, C) end
     ].
 
 add_user_cmd([_, _, _, UserDataPath], _, _) ->
     case file:read_file(UserDataPath) of
         {ok, Blob} ->
             case catch riak_kv_wm_json:decode(Blob) of
-                #{<<"name">> := Name,
-                  <<"password">> := Password,
-                  <<"expires">> := Expires_,
-                  <<"permissions">> := Permissions_} ->
+                #{
+                    <<"name">> := Name,
+                    <<"password">> := Password,
+                    <<"expires">> := Expires_,
+                    <<"permissions">> := Permissions_
+                } ->
                     {Hash, Salt} = riak_admin_api_auth:hash_password(Password),
                     case {validate_perms(Permissions_), validate_expires(Expires_)} of
                         {{valid, Permissions}, {valid, Expires}} ->
-                            User = ?USER{groups = [],
-                                         expires = Expires,
-                                         permissions = Permissions,
-                                         auth_details = #{method => password,
-                                                          details => #{password_hash => Hash,
-                                                                       salt => Salt}}
-                                        },
+                            User = ?USER{
+                                groups = [],
+                                expires = Expires,
+                                permissions = Permissions,
+                                auth_details = #{
+                                    method => password,
+                                    details => #{
+                                        password_hash => Hash,
+                                        salt => Salt
+                                    }
+                                }
+                            },
                             case riak_admin_api_ug:add_user(Name, User) of
                                 ok ->
                                     [];
@@ -193,9 +211,10 @@ validate_perms(<<"all">>) ->
 validate_perms(PP_) when is_list(PP_) ->
     try
         PP = [binary_to_existing_atom(P) || P <- PP_, lists:member(P, ?ALL_PERMS)],
-        if length(PP) == length(PP_) ->
+        if
+            length(PP) == length(PP_) ->
                 {valid, PP};
-           el/=se ->
+            el /= se ->
                 invalid
         end
     catch
@@ -225,17 +244,19 @@ validate_expires(A) when is_binary(A) ->
 validate_expires(_) ->
     invalid.
 
-
 del_user_usage() ->
-    ["riak admin admin-api del-user NAME\n",
-     "\n",
-     "Delete a user with name NAME.\n"
+    [
+        "riak admin admin-api del-user NAME\n",
+        "\n",
+        "Delete a user with name NAME.\n"
     ].
 
 del_user_spec() ->
-    [["riak-admin", "admin-api", "del-user", '*'],
-     '_', [],
-     fun(A, B, C) -> main(fun del_user_cmd/3, A, B, C) end
+    [
+        ["riak-admin", "admin-api", "del-user", '*'],
+        '_',
+        [],
+        fun(A, B, C) -> main(fun del_user_cmd/3, A, B, C) end
     ].
 
 del_user_cmd([_, _, _, Name], _, _) ->
@@ -246,65 +267,75 @@ del_user_cmd([_, _, _, Name], _, _) ->
             [clique_status_alert("No such user")]
     end.
 
-
 list_users_usage() ->
-    ["riak admin admin-api list-users\n",
-     "\n",
-     "List users.\n"
+    [
+        "riak admin admin-api list-users\n",
+        "\n",
+        "List users.\n"
     ].
 
 list_users_spec() ->
-    [["riak-admin", "admin-api", "list-users"],
-     '_', [],
-     fun(A, B, C) -> main(fun list_users_cmd/3, A, B, C) end
+    [
+        ["riak-admin", "admin-api", "list-users"],
+        '_',
+        [],
+        fun(A, B, C) -> main(fun list_users_cmd/3, A, B, C) end
     ].
 
 list_users_cmd([_, _, _], _, _) ->
-    Tf = fun(never) -> <<"never">>;
-            (A) -> calendar:system_time_to_rfc3339(A, [{unit, millisecond}]) end,
-    Pf = fun(PP) when length(PP) == 3 -> "*";
-            (PP) -> string:join([fmtp(P) || P <- PP], ",")
-         end,
+    Tf = fun
+        (never) -> <<"never">>;
+        (A) -> calendar:system_time_to_rfc3339(A, [{unit, millisecond}])
+    end,
+    Pf = fun
+        (PP) when length(PP) == 3 -> "*";
+        (PP) -> string:join([fmtp(P) || P <- PP], ",")
+    end,
     Rows =
-        [[{name, Name},
-          {groups, Groups},
-          {created, Tf(Created)},
-          {modified, Tf(Modified)},
-          {expires, Tf(Expires)},
-          {permissions, Pf(Permissions)},
-          {auth_method, AuthMethod}]
-         || {Name, ?USER{groups = Groups,
-                         created = Created,
-                         modified = Modified,
-                         expires = Expires,
-                         permissions = Permissions,
-                         auth_details = #{method := AuthMethod}
-                        }
-            } <- riak_admin_api_ug:list_users() ],
+        [
+            [
+                {name, Name},
+                {groups, Groups},
+                {created, Tf(Created)},
+                {modified, Tf(Modified)},
+                {expires, Tf(Expires)},
+                {permissions, Pf(Permissions)},
+                {auth_method, AuthMethod}
+            ]
+         || {Name, ?USER{
+                groups = Groups,
+                created = Created,
+                modified = Modified,
+                expires = Expires,
+                permissions = Permissions,
+                auth_details = #{method := AuthMethod}
+            }} <- riak_admin_api_ug:list_users()
+        ],
     [clique_status:table(Rows)].
 
 fmtp(cluster_admin) -> "adm";
 fmtp(cluster_observer) -> "obs";
 fmtp(security) -> "sec".
 
-
 reset_usage() ->
-    ["riak admin admin-api reset\n",
-     "\n",
-     "Delete all users and groups\n"
+    [
+        "riak admin admin-api reset\n",
+        "\n",
+        "Delete all users and groups\n"
     ].
 
 reset_spec() ->
-    [["riak-admin", "admin-api", "reset"],
-     '_', [],
-     fun reset_cmd/3
+    [
+        ["riak-admin", "admin-api", "reset"],
+        '_',
+        [],
+        fun reset_cmd/3
     ].
 
 reset_cmd([_, _, _], _, _) ->
     [riak_admin_api_ug:del_group(G) || {G, _} <- riak_admin_api_ug:list_groups()],
     [riak_admin_api_ug:del_user(U) || {U, _} <- riak_admin_api_ug:list_users()],
     [clique_status_alert("All groups and users deleted")].
-
 
 clique_status_text(F) ->
     clique_status_text(F, []).

@@ -36,25 +36,31 @@ start_link() ->
 -spec init([]) -> {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}} | ignore.
 init([]) ->
     SupFlags =
-        #{strategy => one_for_one,
-          intensity => 10,
-          period => 10},
+        #{
+            strategy => one_for_one,
+            intensity => 10,
+            period => 10
+        },
     case application:get_env(riak_admin_api, admin_api_enabled) of
         {ok, true} ->
             {ok, [{Ip, Port}]} = application:get_env(riak_admin_api, https),
             SMName = riak_api_web:spec_name(https, Ip, Port),
             WMConfig =
-                [{name, SMName},
-                 {ip, Ip},
-                 {port, Port},
-                 {ssl, true},
-                 {ssl_opts, riak_api_ssl:options()},
-                 {nodelay, true}
+                [
+                    {name, SMName},
+                    {ip, Ip},
+                    {port, Port},
+                    {ssl, true},
+                    {ssl_opts, riak_api_ssl:options()},
+                    {nodelay, true}
                 ],
             ChildSpecs =
-                [#{id => SMName,
-                   start => {riak_api_web_socket, start_link, [WMConfig]},
-                   modules => [riak_api_web_socket]}
+                [
+                    #{
+                        id => SMName,
+                        start => {riak_api_web_socket, start_link, [WMConfig]},
+                        modules => [riak_api_web_socket]
+                    }
                 ],
             {ok, {SupFlags, ChildSpecs}};
         _ ->

@@ -25,11 +25,12 @@
 -include("riak_admin_api.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--export([enable/0,
-         disable/0,
-         is_effective/0,
-         status/0
-        ]).
+-export([
+    enable/0,
+    disable/0,
+    is_effective/0,
+    status/0
+]).
 
 -spec enable() -> ok | {error, disabled_in_riak_conf}.
 enable() ->
@@ -61,9 +62,9 @@ status() ->
     {ok, EnabledInConf} = application:get_env(riak_admin_api, admin_api_enabled),
     Enabled = application:get_env(riak_admin_api, admin_api_effective, EnabledInConf),
     Extra =
-        [{enabled_in_riak_conf, EnabledInConf},
-         {users, length(riak_admin_api_ug:list_users())},
-         {groups, length(riak_admin_api_ug:list_groups())}
+        [
+            {enabled_in_riak_conf, EnabledInConf},
+            {users, length(riak_admin_api_ug:list_users())},
+            {groups, length(riak_admin_api_ug:list_groups())}
         ],
     {Enabled, Extra}.
-

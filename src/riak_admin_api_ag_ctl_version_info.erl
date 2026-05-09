@@ -27,12 +27,14 @@
 -include_lib("kernel/include/logger.hrl").
 
 -spec process_request(#{}) ->
-          {ok, map()} | {412, binary()}.
+    {ok, map()} | {412, binary()}.
 process_request(Request) ->
     Res =
         case Request of
-            #{<<"action">> := <<"SystemGetVersionInfo">>,
-              <<"params">> := Params} ->
+            #{
+                <<"action">> := <<"SystemGetVersionInfo">>,
+                <<"params">> := Params
+            } ->
                 Node =
                     case maps:get(<<"node">>, Params, undefined) of
                         undefined ->
@@ -45,8 +47,11 @@ process_request(Request) ->
                     {ok, A#{https_listeners => get_http_listeners()}}
                 catch
                     exit:R ->
-                        ?LOG_WARNING("rpc call to riak_kv_util:system_info()"
-                                     " on node ~s failed: ~p", [Node, R]),
+                        ?LOG_WARNING(
+                            "rpc call to riak_kv_util:system_info()"
+                            " on node ~s failed: ~p",
+                            [Node, R]
+                        ),
                         {badrpc, nodedown}
                 end
         end,
@@ -59,12 +64,14 @@ process_request(Request) ->
 
 get_http_listeners() ->
     lists:foldl(
-      fun(N, Q) ->
-              case rpc:call(N, application, get_env, [riak_api, https]) of
-                  {ok, [{IP, Port}]} ->
-                      Q#{N => iolist_to_binary(["https://", IP, $:, integer_to_binary(Port)])};
-                  _ ->
-                      Q
-              end
-       end, #{}, nodes()
-     ).
+        fun(N, Q) ->
+            case rpc:call(N, application, get_env, [riak_api, https]) of
+                {ok, [{IP, Port}]} ->
+                    Q#{N => iolist_to_binary(["https://", IP, $:, integer_to_binary(Port)])};
+                _ ->
+                    Q
+            end
+        end,
+        #{},
+        nodes()
+    ).

@@ -44,10 +44,11 @@ check_password(BinaryPass, HashedPassword, Salt) ->
     HexPass = pbkdf2:to_hex(HashedPass),
     pbkdf2:compare_secure(HexPass, HashedPassword).
 
-
 -spec authenticate(auth_details(), map()) -> boolean().
-authenticate(#{method := password, details := #{password_hash := Hash, salt := Salt}},
-             #{method := password, details := #{password := Pass}}) ->
+authenticate(
+    #{method := password, details := #{password_hash := Hash, salt := Salt}},
+    #{method := password, details := #{password := Pass}}
+) ->
     check_password(Pass, Hash, Salt);
 authenticate(_, _) ->
     false.

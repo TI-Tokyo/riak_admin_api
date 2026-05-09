@@ -27,12 +27,14 @@
 -include_lib("kernel/include/logger.hrl").
 
 -spec process_request(#{}) ->
-          {ok, map()} | {400..500, binary()}.
+    {ok, map()} | {400..500, binary()}.
 process_request(Request) ->
     Res =
         case Request of
-            #{<<"action">> := <<"TictacaaeGetStatus">>,
-              <<"params">> := Params} ->
+            #{
+                <<"action">> := <<"TictacaaeGetStatus">>,
+                <<"params">> := Params
+            } ->
                 Node =
                     case maps:get(<<"node">>, Params, undefined) of
                         undefined ->
@@ -49,8 +51,11 @@ process_request(Request) ->
                     end
                 catch
                     exit:R ->
-                        ?LOG_WARNING("rpc call to riak_kv_tictacaae_report:produce()"
-                                     " on node ~s failed: ~p", [Node, R]),
+                        ?LOG_WARNING(
+                            "rpc call to riak_kv_tictacaae_report:produce()"
+                            " on node ~s failed: ~p",
+                            [Node, R]
+                        ),
                         {badrpc, nodedown}
                 end
         end,
@@ -66,14 +71,22 @@ process_request(Request) ->
 jsonify_report(Report) ->
     [{N, jsonify_report_items(R)} || {N, R} <- Report].
 jsonify_report_items(II) ->
-    [lists:map(
-       fun({partition, A}) -> {partition, integer_to_binary(A)};
-          ({last_rebuild, A = {_, _, _}}) -> {last_rebuild, fmt_ts(A)};
-          ({next_rebuild, A = {_, _, _}}) -> {next_rebuild, fmt_ts(A)};
-          (A) -> A
-       end, I) || I <- II].
+    [
+        lists:map(
+            fun
+                ({partition, A}) -> {partition, integer_to_binary(A)};
+                ({last_rebuild, A = {_, _, _}}) -> {last_rebuild, fmt_ts(A)};
+                ({next_rebuild, A = {_, _, _}}) -> {next_rebuild, fmt_ts(A)};
+                (A) -> A
+            end,
+            I
+        )
+     || I <- II
+    ].
 
 fmt_ts({M, S, L}) ->
     list_to_binary(
-      calendar:system_time_to_rfc3339(
-        M * 1_000_000 * 1_000 + S * 1_000 + L div 1000, [{unit, millisecond}])).
+        calendar:system_time_to_rfc3339(
+            M * 1_000_000 * 1_000 + S * 1_000 + L div 1000, [{unit, millisecond}]
+        )
+    ).

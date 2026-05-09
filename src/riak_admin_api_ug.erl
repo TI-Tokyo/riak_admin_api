@@ -25,33 +25,35 @@
 -include("riak_admin_api.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--export([all_permissions/0,
+-export([
+    all_permissions/0,
 
-         get_user/1,
-         add_user/2,
-         del_user/1,
-         list_users/0,
+    get_user/1,
+    add_user/2,
+    del_user/1,
+    list_users/0,
 
-         get_group/1,
-         add_group/2,
-         del_group/1,
-         list_groups/0,
+    get_group/1,
+    add_group/2,
+    del_group/1,
+    list_groups/0,
 
-         set_user_expiry/2,
-         add_user_groups/2,
-         del_user_groups/2,
-         add_user_permissions/2,
-         del_user_permissions/2,
+    set_user_expiry/2,
+    add_user_groups/2,
+    del_user_groups/2,
+    add_user_permissions/2,
+    del_user_permissions/2,
 
-         add_group_permissions/2,
-         del_group_permissions/2
-        ]).
+    add_group_permissions/2,
+    del_group_permissions/2
+]).
 
 -spec all_permissions() -> [permission()].
 all_permissions() ->
     [cluster_observer, cluster_admin, security].
 
--define(TOMBSTONE, '$deleted').  %% must match value defined in riak_core_metadata.erl
+%% must match value defined in riak_core_metadata.erl
+-define(TOMBSTONE, '$deleted').
 
 -spec get_user(id()) -> {ok, user()} | {error, notfound | expired}.
 get_user(Name) ->
@@ -70,8 +72,10 @@ get_user(Name) ->
 
 -spec add_user(id(), user()) -> ok | {error, already_exists}.
 add_user(Name, User) ->
-    Record = User?USER{created = now_ms(),
-                       modified = now_ms()},
+    Record = User?USER{
+        created = now_ms(),
+        modified = now_ms()
+    },
     case riak_core_metadata:get({?ADMIN_MD_PREFIX, <<"u">>}, Name) of
         undefined ->
             put_user(Name, Record);
@@ -97,18 +101,18 @@ set_user_expiry(Name, Expires) ->
             put_user(Name, User?USER{expires = Expires})
     end.
 
-
 -spec list_users() -> [{id(), user()}].
 list_users() ->
     riak_core_metadata:fold(
-      fun({_, [?TOMBSTONE]}, Acc) ->
-              Acc;
-         ({Name, [A|_]}, Acc) ->
-              [{Name, A} | Acc]
-      end,
-      [], {?ADMIN_MD_PREFIX, <<"u">>}
-     ).
-
+        fun
+            ({_, [?TOMBSTONE]}, Acc) ->
+                Acc;
+            ({Name, [A | _]}, Acc) ->
+                [{Name, A} | Acc]
+        end,
+        [],
+        {?ADMIN_MD_PREFIX, <<"u">>}
+    ).
 
 -spec get_group(id()) -> {ok, group()} | {error, notfound}.
 get_group(Name) ->
@@ -129,11 +133,15 @@ del_group(Name) ->
         {error, notfound} ->
             {error, notfound};
         _ ->
-            Members = [UName || {UName, ?USER{groups = UGroups}} <- list_users(),
-                                lists:member(Name, UGroups)],
-            if Members =:= [] ->
+            Members = [
+                UName
+             || {UName, ?USER{groups = UGroups}} <- list_users(),
+                lists:member(Name, UGroups)
+            ],
+            if
+                Members =:= [] ->
                     riak_core_metadata:delete({?ADMIN_MD_PREFIX, <<"g">>}, Name);
-               el/=se ->
+                el /= se ->
                     {error, has_members}
             end
     end.
@@ -141,14 +149,15 @@ del_group(Name) ->
 -spec list_groups() -> [{id(), group()}].
 list_groups() ->
     riak_core_metadata:fold(
-      fun({_, [?TOMBSTONE]}, Acc) ->
-              Acc;
-         ({Name, A}, Acc) ->
-              [{Name, A} | Acc]
-      end,
-      [], {?ADMIN_MD_PREFIX, <<"g">>}
-     ).
-
+        fun
+            ({_, [?TOMBSTONE]}, Acc) ->
+                Acc;
+            ({Name, A}, Acc) ->
+                [{Name, A} | Acc]
+        end,
+        [],
+        {?ADMIN_MD_PREFIX, <<"g">>}
+    ).
 
 -spec add_user_groups(id(), [id()]) -> ok | {error, notfound | no_such_group}.
 add_user_groups(Name, Groups) ->
@@ -165,8 +174,10 @@ add_user_groups(Name, Groups) ->
                         GG0 ->
                             ok;
                         GG9 ->
-                            Record = User?USER{groups = GG9,
-                                               modified = now_ms()},
+                            Record = User?USER{
+                                groups = GG9,
+                                modified = now_ms()
+                            },
                             put_user(Name, Record)
                     end
             end
@@ -182,12 +193,13 @@ del_user_groups(Name, Groups) ->
                 GG0 ->
                     ok;
                 GG9 ->
-                    Record = User?USER{groups = GG9,
-                                       modified = now_ms()},
+                    Record = User?USER{
+                        groups = GG9,
+                        modified = now_ms()
+                    },
                     put_user(Name, Record)
             end
     end.
-
 
 -spec add_user_permissions(id(), [permission()]) -> ok | {error, notfound}.
 add_user_permissions(Name, Perms) ->
@@ -206,8 +218,10 @@ mod_user_permissions(Name, Perms, Op) ->
                 PP0 ->
                     ok;
                 PP9 ->
-                    Record = User?USER{permissions = PP9,
-                                       modified = now_ms()},
+                    Record = User?USER{
+                        permissions = PP9,
+                        modified = now_ms()
+                    },
                     put_user(Name, Record)
             end
     end.
@@ -229,8 +243,10 @@ mod_group_permissions(Name, Perms, Op) ->
                 PP0 ->
                     ok;
                 PP9 ->
-                    Record = User?GROUP{permissions = PP9,
-                                        modified = now_ms()},
+                    Record = User?GROUP{
+                        permissions = PP9,
+                        modified = now_ms()
+                    },
                     put_group(Name, Record)
             end
     end.
@@ -244,14 +260,15 @@ put_group(Name, A) ->
 
 list_group_names() ->
     riak_core_metadata:fold(
-      fun({_, [?TOMBSTONE]}, Acc) ->
-              Acc;
-         ({Name, _}, Acc) ->
-              [Name | Acc]
-      end,
-      [], {?ADMIN_MD_PREFIX, <<"g">>}
-     ).
-
+        fun
+            ({_, [?TOMBSTONE]}, Acc) ->
+                Acc;
+            ({Name, _}, Acc) ->
+                [Name | Acc]
+        end,
+        [],
+        {?ADMIN_MD_PREFIX, <<"g">>}
+    ).
 
 now_ms() ->
     os:system_time(millisecond).

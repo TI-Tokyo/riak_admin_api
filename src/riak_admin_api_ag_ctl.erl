@@ -38,11 +38,13 @@
 -include("riak_admin_api.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--record(context, {method :: riak_api_web_acceptor:method(),
-                  request :: undefined | map(),
-                  creds :: undefined | map(),
-                  user :: undefined | user(),
-                  req_body :: undefined | riak_api_web_body:req_body()}).
+-record(context, {
+    method :: riak_api_web_acceptor:method(),
+    request :: undefined | map(),
+    creds :: undefined | map(),
+    user :: undefined | user(),
+    req_body :: undefined | riak_api_web_body:req_body()
+}).
 
 -define(TXT_HEADER, {'Content-Type', <<"text/plain">>}).
 -define(JSN_HEADER, {'Content-Type', <<"application/json">>}).
@@ -74,7 +76,6 @@ size_limits() ->
         10 * 1024
     }.
 
-
 -spec check_permissions(
     riak_api_web_headers:headers(),
     riak_api_web_socket:scheme(),
@@ -98,7 +99,6 @@ check_permissions(_ReqHeaders, _Scheme, _Peer, _Cert, Ctx) ->
             {halt, 428, [?TXT_HEADER], <<"Service unavailable">>, []}
     end.
 
-
 -spec parse_query_params(
     riak_api_web_handler:query_params(),
     #context{}
@@ -108,7 +108,6 @@ parse_query_params([], Ctx) ->
     {ok, Ctx};
 parse_query_params(_, _Ctx) ->
     {halt, 400, [?TXT_HEADER], <<"No request parameters acceptable">>, []}.
-
 
 -spec parse_request_headers(
     riak_api_web_headers:headers(),
@@ -124,11 +123,12 @@ parse_request_headers(ReqHeaders, Ctx) ->
                 {error, notfound} ->
                     {halt, 401, [?TXT_HEADER], <<"Unauthorized">>, []};
                 {ok, User} ->
-                    {ok, Ctx#context{user = User,
-                                     creds = Creds}}
+                    {ok, Ctx#context{
+                        user = User,
+                        creds = Creds
+                    }}
             end
     end.
-
 
 -spec process_request(
     riak_api_web_body:req_body() | none,
@@ -170,10 +170,16 @@ authorize(ReqBody, Ctx) ->
                     {halt, 400, [?TXT_HEADER], <<"Malformed request">>, []}
             end
     end.
-authorize2(Ctx = #context{request = #{<<"action">> := Action},
-                          user = ?USER{permissions = UserPermissions,
-                                       auth_details = AuthDetails},
-                          creds = Creds}) ->
+authorize2(
+    Ctx = #context{
+        request = #{<<"action">> := Action},
+        user = ?USER{
+            permissions = UserPermissions,
+            auth_details = AuthDetails
+        },
+        creds = Creds
+    }
+) ->
     case riak_admin_api_auth:authenticate(AuthDetails, Creds) of
         true ->
             ReqPermissions = riak_admin_api_web:permissions_for(Action),
@@ -195,8 +201,10 @@ extract_usercreds(ReqHeaders) ->
             UserPass = list_to_binary(base64:decode_to_string(Base64)),
             case binary:split(UserPass, <<":">>) of
                 [User, Pass] ->
-                    {User, #{method => password,
-                             details => #{password => Pass}}};
+                    {User, #{
+                        method => password,
+                        details => #{password => Pass}
+                    }};
                 _ ->
                     undefined
             end;
@@ -211,9 +219,12 @@ intersect(_, []) ->
 intersect(AA, BB) ->
     lists:any(fun(A) -> lists:member(A, BB) end, AA).
 
-
-process_post(Ctx = #context{request = Request,
-                            req_body = ReqBody}) ->
+process_post(
+    Ctx = #context{
+        request = Request,
+        req_body = ReqBody
+    }
+) ->
     #{<<"action">> := Action} = Request,
     try
         case riak_admin_api_web:handler_mod(Action) of
@@ -223,31 +234,29 @@ process_post(Ctx = #context{request = Request,
                 case Mod:process_request(Request) of
                     {ok, Res} ->
                         {ok,
-                         {200,
-                          riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
-                          iolist_to_binary(riak_kv_wm_json:encode(#{result => Res})),
-                          true, ReqBody},
-                         Ctx};
+                            {200, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
+                                iolist_to_binary(riak_kv_wm_json:encode(#{result => Res})), true,
+                                ReqBody},
+                            Ctx};
                     {StatusCode, Err} ->
-                        {halt, StatusCode,
-                         riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
-                         riak_kv_wm_json:encode(#{error => Err}), []}
+                        {halt, StatusCode, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
+                            riak_kv_wm_json:encode(#{error => Err}), []}
                 end
         end
     catch
         _t:_e:_st ->
             ?LOG_NOTICE("~p:~p ~p", [_t, _e, _st]),
-            {halt, 500,
-             riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
-             riak_kv_wm_json:encode(
-               #{error => <<"Internal error">>}), []}
+            {halt, 500, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
+                riak_kv_wm_json:encode(
+                    #{error => <<"Internal error">>}
+                ),
+                []}
     end.
-
 
 -spec record_request(
     riak_api_web_handler:timings(),
     riak_api_web_handler:completion(),
-        #context{}
+    #context{}
 ) ->
     ok.
 record_request(_Timings, _Completion, _Ctx) ->
