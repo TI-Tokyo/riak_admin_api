@@ -43,7 +43,7 @@ process_request(Request) ->
                             binary_to_atom(Defined)
                     end,
                 try
-                    case rpc:call(Node, riak_kv_tictacaae_report, produce, []) of
+                    case rpc:call(Node, riak_kv_tictacaae_cli, get_aae_progress_report, []) of
                         {badrpc, _} ->
                             {error, tictacaae_passive};
                         A ->
@@ -69,20 +69,19 @@ process_request(Request) ->
     end.
 
 jsonify_report(Report) ->
-    [{N, jsonify_report_items(R)} || {N, R} <- Report].
+    [jsonify_report_items(R) || R <- Report].
 jsonify_report_items(II) ->
-    [
+    maps:from_list(
         lists:map(
             fun
-                ({partition, A}) -> {partition, integer_to_binary(A)};
-                ({last_rebuild, A = {_, _, _}}) -> {last_rebuild, fmt_ts(A)};
-                ({next_rebuild, A = {_, _, _}}) -> {next_rebuild, fmt_ts(A)};
-                (A) -> A
+                ({partition, A}) -> {<<"partition">>, integer_to_binary(A)};
+                ({last_rebuild, A = {_, _, _}}) -> {<<"last_rebuild">>, fmt_ts(A)};
+                ({next_rebuild, A = {_, _, _}}) -> {<<"next_rebuild">>, fmt_ts(A)};
+                ({P, V}) -> {atom_to_binary(P), V}
             end,
-            I
+            II
         )
-     || I <- II
-    ].
+    ).
 
 fmt_ts({M, S, L}) ->
     list_to_binary(

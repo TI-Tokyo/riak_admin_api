@@ -1,19 +1,19 @@
-{application, riak_admin_api,
- [{description, "Riak admin API (/ctl), evolution of riak_control"},
-  {vsn, git},
-  {registered, [riak_admin_api_sup]},
-  {applications,
-   [kernel,
-    stdlib,
-    ssl,
-    pbkdf2,
-    riak_core,
-    riak_kv,
-    riak_api
-   ]},
-  {env,[]},
-  {modules, []},
-  {mod, {riak_admin_api_app, []}},
-  {licenses, ["Apache-2.0"]},
-  {links, []}
- ]}.
+{application, riak_admin_api, [
+    {description, "Riak admin API (/ctl), evolution of riak_control"},
+    {vsn, git},
+    {registered, [riak_admin_api_sup]},
+    {applications, [
+        kernel,
+        stdlib,
+        ssl,
+        pbkdf2,
+        riak_core,
+        riak_kv,
+        riak_api
+    ]},
+    {env, []},
+    {modules, []},
+    {mod, {riak_admin_api_app, []}},
+    {licenses, ["Apache-2.0"]},
+    {links, []}
+]}.

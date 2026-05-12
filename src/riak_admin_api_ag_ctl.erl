@@ -71,7 +71,7 @@ match_route(Method, Path, _) ->
 
 size_limits() ->
     {
-        8,
+        20,
         1024,
         10 * 1024
     }.
@@ -114,6 +114,8 @@ parse_query_params(_, _Ctx) ->
     #context{}
 ) ->
     {ok, #context{}} | riak_api_web_acceptor:halt_response().
+parse_request_headers(_, Ctx = #context{method = 'OPTIONS'}) ->
+    {ok, Ctx};
 parse_request_headers(ReqHeaders, Ctx) ->
     case extract_usercreds(ReqHeaders) of
         undefined ->
@@ -146,8 +148,8 @@ parse_request_headers(ReqHeaders, Ctx) ->
         #context{}
     }
     | riak_api_web_acceptor:halt_response().
-process_request(_, #context{method = 'OPTIONS'} = Ctx) ->
-    {ok, {200, riak_admin_api_web:cors_headers(), <<>>, true, none}, Ctx};
+process_request(ReqBody, #context{method = 'OPTIONS'} = Ctx) ->
+    {ok, {200, riak_admin_api_web:cors_headers(), <<>>, true, ReqBody}, Ctx};
 process_request(none, _Ctx) ->
     {halt, 400, [?TXT_HEADER], <<"No request body">>, []};
 process_request(ReqBody, Ctx0) ->

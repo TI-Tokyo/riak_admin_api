@@ -30,9 +30,8 @@
 
 -include_lib("kernel/include/logger.hrl").
 
-
 -spec start(application:start_type(), term()) ->
-          {ok, pid()} | {error, supervisor:startlink_err()}.
+    {ok, pid()} | {error, supervisor:startlink_err()}.
 start(_Type, _) ->
     riak_core_util:start_app_deps(riak_admin_api),
     case riak_admin_api_sup:start_link() of
@@ -40,8 +39,11 @@ start(_Type, _) ->
             case application:get_env(riak_admin_api, admin_api_enabled, false) of
                 true ->
                     ok = riak_api_web:add_routes(
-                           [{5, riak_admin_api_ag_ctl},
-                            {10, riak_admin_api_ag_ping}]),
+                        [
+                            {5, riak_admin_api_ag_ctl},
+                            {10, riak_admin_api_ag_ping}
+                        ]
+                    ),
                     ok = clique:register([riak_admin_api_cli]),
                     application:set_env(riak_admin_api, admin_api_effective, true);
                 false ->

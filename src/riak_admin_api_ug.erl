@@ -214,7 +214,7 @@ mod_user_permissions(Name, Perms, Op) ->
         {error, notfound} ->
             {error, notfound};
         {ok, User = ?USER{permissions = PP0}} ->
-            case lists:usort(erlang:Op(Perms, PP0)) of
+            case lists:usort(erlang:Op(PP0, Perms)) of
                 PP0 ->
                     ok;
                 PP9 ->

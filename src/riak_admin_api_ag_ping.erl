@@ -52,11 +52,11 @@
     | {ok, riak_api_web_handler:limits(), #context{}}.
 match_route(Method, Path, _) ->
     case {string:trim(Path, both, "/"), Method} of
-        {"ctl/ping", 'OPTIONS'} ->
+        {<<"ctl/ping">>, 'OPTIONS'} ->
             {ok, size_limits(), #context{method = Method}};
-        {"ctl/ping", 'GET'} ->
+        {<<"ctl/ping">>, 'GET'} ->
             {ok, size_limits(), #context{method = Method}};
-        {"ctl/ping", _} ->
+        {<<"ctl/ping">>, _} ->
             {method_not_allowed, ['GET', 'OPTIONS']};
         _ ->
             nomatch
@@ -64,7 +64,7 @@ match_route(Method, Path, _) ->
 
 size_limits() ->
     {
-        5,
+        20,
         1024,
         0
     }.

@@ -57,12 +57,9 @@ process_request(Request) ->
                 {ok, A};
             #{
                 <<"action">> := <<"SecurityCreateUser">>,
-                <<"params">> := #{
-                    <<"name">> := Name,
-                    <<"options">> := Options
-                }
+                <<"params">> := #{<<"name">> := Name} = Params
             } ->
-                case make_user(Options) of
+                case make_user(Params) of
                     {ok, User} ->
                         riak_admin_api_ug:add_user(Name, User);
                     ER ->
@@ -219,14 +216,15 @@ make_user(
         <<"auth_details">> := #{
             <<"method">> := <<"password">>,
             <<"password">> := Password
-        }
-    } = Options
+        },
+        <<"tags">> := Tags
+    } = Params
 ) ->
     Now = os:system_time(millisecond),
     try
         Expires =
-            case maps:get(<<"expires">>, Options, undefined) of
-                undefined ->
+            case maps:get(<<"expires">>, Params, <<"never">>) of
+                <<"never">> ->
                     never;
                 Defined ->
                     binary_to_integer(Defined)
@@ -244,7 +242,8 @@ make_user(
             permissions = [],
             created = Now,
             modified = Now,
-            expires = Expires
+            expires = Expires,
+            tags = Tags
         }}
     catch
         error:badarg ->
@@ -265,5 +264,5 @@ make_group(_) ->
 
 validate_permission_(<<"cluster_observer">>, Q) -> [cluster_observer | Q];
 validate_permission_(<<"cluster_admin">>, Q) -> [cluster_admin | Q];
-validate_permission_(<<"security">>, Q) -> [security, Q];
+validate_permission_(<<"security">>, Q) -> [security | Q];
 validate_permission_(_, Q) -> Q.

@@ -27,24 +27,31 @@
 -type permission() :: cluster_observer | cluster_admin | security.
 
 -type auth_method() :: password.
--type auth_details() :: #{method := auth_method(),
-                          details := map()}.
+-type auth_details() :: #{
+    method := auth_method(),
+    details := map()
+}.
 
--record(user_v1, {groups :: [id()],
-                  created :: undefined | ts(),
-                  modified :: undefined | ts(),
-                  expires :: never | ts(),
-                  permissions :: [permission()],
-                  auth_details :: #{method := auth_method(),
-                                    details := map()}
-                 }).
+-record(user_v1, {
+    groups :: [id()],
+    created :: undefined | ts(),
+    modified :: undefined | ts(),
+    expires :: never | ts(),
+    permissions :: [permission()],
+    auth_details :: #{
+        method := auth_method(),
+        details := map()
+    },
+    tags = #{} :: #{binary() => binary()}
+}).
 -type user() :: #user_v1{}.
 -define(USER, #user_v1).
 
--record(group_v1, {created :: ts(),
-                   modified :: ts(),
-                   permissions :: [permission()]
-                  }).
+-record(group_v1, {
+    created :: ts(),
+    modified :: ts(),
+    permissions :: [permission()]
+}).
 -type group() :: #group_v1{}.
 -define(GROUP, #group_v1).
 
