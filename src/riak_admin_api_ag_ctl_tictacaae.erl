@@ -43,7 +43,7 @@ process_request(Request) ->
                             binary_to_atom(Defined)
                     end,
                 try
-                    case rpc:call(Node, riak_kv_tictacaae_cli, get_aae_progress_report, []) of
+                    case rpc:call(Node, riak_kv_tictacaae_report, produce, []) of
                         {badrpc, _} ->
                             {error, tictacaae_passive};
                         A ->

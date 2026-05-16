@@ -231,7 +231,9 @@ process_post(
     try
         case riak_admin_api_web:handler_mod(Action) of
             undefined ->
-                {halt, 400, [?TXT_HEADER], <<"Invalid request action">>, Ctx};
+                {halt, 400, [?TXT_HEADER],
+                 riak_kv_wm_json:encode(
+                   #{error => <<"Invalid request action">>}), []};
             Mod ->
                 case Mod:process_request(Request) of
                     {ok, Res} ->
@@ -247,7 +249,7 @@ process_post(
         end
     catch
         _t:_e:_st ->
-            ?LOG_NOTICE("~p:~p ~p", [_t, _e, _st]),
+            ?LOG_WARNING("Unhandled error serving admin-api request ~p: ~p:~p ~p", [_t, _e, _st]),
             {halt, 500, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
                 riak_kv_wm_json:encode(
                     #{error => <<"Internal error">>}

@@ -92,13 +92,19 @@ del_user(Name) ->
             riak_core_metadata:delete({?ADMIN_MD_PREFIX, <<"u">>}, Name)
     end.
 
--spec set_user_expiry(id(), never | non_neg_integer()) -> ok | {error, notfound}.
+-spec set_user_expiry(id(), never | non_neg_integer()) -> ok | {error, invalid_arg | notfound}.
 set_user_expiry(Name, Expires) ->
-    case get_user(Name) of
-        {error, notfound} ->
-            {error, notfound};
-        {ok, User} ->
-            put_user(Name, User?USER{expires = Expires})
+    case os:system_time(millisecond) > Expires of
+        true ->
+            {error, invalid_arg};
+        false ->
+            case get_user(Name) of
+                {error, notfound} ->
+                    {error, notfound};
+                {ok, User} ->
+                    put_user(Name, User?USER{expires = Expires,
+                                             modified = now_ms()})
+            end
     end.
 
 -spec list_users() -> [{id(), user()}].

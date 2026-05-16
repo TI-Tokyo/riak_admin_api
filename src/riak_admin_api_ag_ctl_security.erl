@@ -77,9 +77,12 @@ process_request(Request) ->
                         case Expires_ of
                             <<"never">> ->
                                 never;
-                            _ ->
-                                binary_to_integer(Expires_)
+                            Millis when is_integer(Millis) ->
+                                Millis;
+                            MustBeRfc3339 ->
+                                calendar:rfc3339_to_system_time(MustBeRfc3339, [{unit, millisecond}])
                         end,
+                    ?LOG_NOTICE("Expires_: ~p", [Expires]),
                     riak_admin_api_ug:set_user_expiry(Name, Expires)
                 catch
                     error:badarg ->
@@ -193,7 +196,10 @@ process_request(Request) ->
                         riak_admin_api_ug:del_group_permissions(Group, Perms)
                 end;
             #{<<"action">> := <<"SecurityListPermissions">>} ->
-                {ok, [atom_to_binary(P) || P <- riak_admin_api_ug:all_permissions()]}
+                {ok, [atom_to_binary(P) || P <- riak_admin_api_ug:all_permissions()]};
+
+            _ ->
+                {error, invalid_spec}
         end,
 
     case Res of
@@ -201,6 +207,8 @@ process_request(Request) ->
             {ok, <<"ok">>};
         {ok, GoodResult} ->
             {ok, GoodResult};
+        {error, already_exists} ->
+            {412, <<"User or group already exists">>};
         {error, notfound} ->
             {404, <<"No such user or group">>};
         {error, no_such_group} ->
@@ -216,11 +224,12 @@ make_user(
         <<"auth_details">> := #{
             <<"method">> := <<"password">>,
             <<"password">> := Password
-        },
-        <<"tags">> := Tags
+        }
     } = Params
 ) ->
     Now = os:system_time(millisecond),
+    Tags = maps:get(<<"tags">>, Params, []),
+
     try
         Expires =
             case maps:get(<<"expires">>, Params, <<"never">>) of
