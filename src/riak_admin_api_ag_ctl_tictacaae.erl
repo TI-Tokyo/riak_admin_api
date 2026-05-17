@@ -58,7 +58,6 @@ process_request(Request) ->
                         ),
                         {badrpc, nodedown}
                 end;
-
             #{<<"action">> := A} ->
                 {error, iolist_to_binary([<<"Missing request parameters for action ">>, A])}
         end,

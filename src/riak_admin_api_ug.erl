@@ -103,8 +103,10 @@ set_user_expiry(Name, Expires) ->
                 {error, notfound} ->
                     {error, notfound};
                 {ok, User} ->
-                    put_user(Name, User?USER{expires = Expires,
-                                             modified = now_ms()})
+                    put_user(Name, User?USER{
+                        expires = Expires,
+                        modified = now_ms()
+                    })
             end
     end.
 
@@ -169,7 +171,7 @@ list_groups() ->
         fun
             ({_, [?TOMBSTONE]}, Acc) ->
                 Acc;
-            ({Name, [A|_]}, Acc) ->
+            ({Name, [A | _]}, Acc) ->
                 [{Name, A} | Acc]
         end,
         [],

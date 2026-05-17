@@ -198,7 +198,6 @@ process_request(Request) ->
                 end;
             #{<<"action">> := <<"SecurityListPermissions">>} ->
                 {ok, [atom_to_binary(P) || P <- riak_admin_api_ug:all_permissions()]};
-
             #{<<"action">> := A} ->
                 {error, iolist_to_binary([<<"Missing request parameters for action ">>, A])}
         end,
