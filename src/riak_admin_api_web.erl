@@ -44,39 +44,55 @@ cors_headers() ->
         >>}
     ].
 
-handler_mod(<<"ClusterGetStatus">>) -> riak_admin_api_ag_ctl_cluster;
-handler_mod(<<"ClusterClearPlan">>) -> riak_admin_api_ag_ctl_cluster;
-handler_mod(<<"ClusterCommitPlan">>) -> riak_admin_api_ag_ctl_cluster;
-handler_mod(<<"ClusterStageJoin">>) -> riak_admin_api_ag_ctl_cluster;
-handler_mod(<<"ClusterStageLeave">>) -> riak_admin_api_ag_ctl_cluster;
-handler_mod(<<"ClusterStageRemove">>) -> riak_admin_api_ag_ctl_cluster;
-handler_mod(<<"ClusterStageReplace">>) -> riak_admin_api_ag_ctl_cluster;
-handler_mod(<<"ClusterStageForceReplace">>) -> riak_admin_api_ag_ctl_cluster;
-handler_mod(<<"ClusterDownNode">>) -> riak_admin_api_ag_ctl_cluster;
-handler_mod(<<"ClusterStopNode">>) -> riak_admin_api_ag_ctl_cluster;
-handler_mod(<<"NodeGetAppEnv">>) -> riak_admin_api_ag_ctl_cluster;
-handler_mod(<<"NodePutAppEnv">>) -> riak_admin_api_ag_ctl_cluster;
-handler_mod(<<"NodeGetAdvancedConfig">>) -> riak_admin_api_ag_ctl_cluster;
-handler_mod(<<"NodePutAdvancedConfig">>) -> riak_admin_api_ag_ctl_cluster;
-handler_mod(<<"NodeRestart">>) -> riak_admin_api_ag_ctl_cluster;
-handler_mod(<<"VnodeGetStatus">>) -> riak_admin_api_ag_ctl_vnode;
-handler_mod(<<"TictacaaeGetStatus">>) -> riak_admin_api_ag_ctl_tictacaae;
-handler_mod(<<"SystemGetVersionInfo">>) -> riak_admin_api_ag_ctl_version_info;
-handler_mod(<<"SecurityListUsers">>) -> riak_admin_api_ag_ctl_security;
-handler_mod(<<"SecurityCreateUser">>) -> riak_admin_api_ag_ctl_security;
-handler_mod(<<"SecuritySetUserExpiry">>) -> riak_admin_api_ag_ctl_security;
-handler_mod(<<"SecurityDeleteUser">>) -> riak_admin_api_ag_ctl_security;
-handler_mod(<<"SecurityListGroups">>) -> riak_admin_api_ag_ctl_security;
-handler_mod(<<"SecurityCreateGroup">>) -> riak_admin_api_ag_ctl_security;
-handler_mod(<<"SecurityDeleteGroup">>) -> riak_admin_api_ag_ctl_security;
-handler_mod(<<"SecurityAddUserGroups">>) -> riak_admin_api_ag_ctl_security;
-handler_mod(<<"SecurityDeleteUserGroups">>) -> riak_admin_api_ag_ctl_security;
-handler_mod(<<"SecurityAddUserPermissions">>) -> riak_admin_api_ag_ctl_security;
-handler_mod(<<"SecurityDeleteUserPermissions">>) -> riak_admin_api_ag_ctl_security;
-handler_mod(<<"SecurityAddGroupPermissions">>) -> riak_admin_api_ag_ctl_security;
-handler_mod(<<"SecurityDeleteGroupPermissions">>) -> riak_admin_api_ag_ctl_security;
-handler_mod(<<"SecurityListPermissions">>) -> riak_admin_api_ag_ctl_security;
-handler_mod(_) -> undefined.
+-spec handler_mod(binary()) -> undefined | not_enabled | module().
+handler_mod(A) ->
+    {ok, Classes} = application:get_env(riak_admin_api, sec_group),
+    EnabledClasses = [C || {C, F} <- Classes, F == true],
+    case i(A) of
+        undefined ->
+            undefined;
+        {Mod, Class} ->
+            case lists:member(Class, EnabledClasses) of
+                false ->
+                    not_enabled;
+                true ->
+                    Mod
+            end
+    end.
+
+i(<<"ClusterGetStatus">>) -> {riak_admin_api_ag_ctl_cluster, monitoring};
+i(<<"ClusterClearPlan">>) -> {riak_admin_api_ag_ctl_cluster, admin};
+i(<<"ClusterCommitPlan">>) -> {riak_admin_api_ag_ctl_cluster, admin};
+i(<<"ClusterStageJoin">>) -> {riak_admin_api_ag_ctl_cluster, admin};
+i(<<"ClusterStageLeave">>) -> {riak_admin_api_ag_ctl_cluster, admin};
+i(<<"ClusterStageRemove">>) -> {riak_admin_api_ag_ctl_cluster, admin};
+i(<<"ClusterStageReplace">>) -> {riak_admin_api_ag_ctl_cluster, admin};
+i(<<"ClusterStageForceReplace">>) -> {riak_admin_api_ag_ctl_cluster, admin};
+i(<<"ClusterDownNode">>) -> {riak_admin_api_ag_ctl_cluster, admin};
+i(<<"ClusterStopNode">>) -> {riak_admin_api_ag_ctl_cluster, admin};
+i(<<"NodeGetAppEnv">>) -> {riak_admin_api_ag_ctl_cluster, monitoring};
+i(<<"NodePutAppEnv">>) -> {riak_admin_api_ag_ctl_cluster, admin};
+i(<<"NodeGetAdvancedConfig">>) -> {riak_admin_api_ag_ctl_cluster, monitoring};
+i(<<"NodePutAdvancedConfig">>) -> {riak_admin_api_ag_ctl_cluster, admin};
+i(<<"NodeRestart">>) -> {riak_admin_api_ag_ctl_cluster, admin};
+i(<<"VnodeGetStatus">>) -> {riak_admin_api_ag_ctl_vnode, monitoring};
+i(<<"TictacaaeGetStatus">>) -> {riak_admin_api_ag_ctl_tictacaae, monitoring};
+i(<<"SystemGetVersionInfo">>) -> {riak_admin_api_ag_ctl_version_info, monitoring};
+i(<<"SecurityListUsers">>) -> {riak_admin_api_ag_ctl_security, superuser};
+i(<<"SecurityCreateUser">>) -> {riak_admin_api_ag_ctl_security, superuser};
+i(<<"SecuritySetUserExpiry">>) -> {riak_admin_api_ag_ctl_security, superuser};
+i(<<"SecurityDeleteUser">>) -> {riak_admin_api_ag_ctl_security, superuser};
+i(<<"SecurityListGroups">>) -> {riak_admin_api_ag_ctl_security, superuser};
+i(<<"SecurityCreateGroup">>) -> {riak_admin_api_ag_ctl_security, superuser};
+i(<<"SecurityDeleteGroup">>) -> {riak_admin_api_ag_ctl_security, superuser};
+i(<<"SecurityAddUserGroups">>) -> {riak_admin_api_ag_ctl_security, superuser};
+i(<<"SecurityDeleteUserGroups">>) -> {riak_admin_api_ag_ctl_security, superuser};
+i(<<"SecurityAddUserPermissions">>) -> {riak_admin_api_ag_ctl_security, superuser};
+i(<<"SecurityDeleteUserPermissions">>) -> {riak_admin_api_ag_ctl_security, superuser};
+i(<<"SecurityAddGroupPermissions">>) -> {riak_admin_api_ag_ctl_security, superuser};
+i(<<"SecurityDeleteGroupPermissions">>) -> {riak_admin_api_ag_ctl_security, superuser};
+i(<<"SecurityListPermissions">>) -> {riak_admin_api_ag_ctl_security, superuser};
+i(_) -> undefined.
 
 permissions_for(<<"ClusterGetStatus">>) -> [cluster_observer];
 permissions_for(<<"ClusterClearPlan">>) -> [cluster_observer, cluster_admin];

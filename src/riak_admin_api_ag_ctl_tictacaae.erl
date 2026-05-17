@@ -57,15 +57,21 @@ process_request(Request) ->
                             [Node, R]
                         ),
                         {badrpc, nodedown}
-                end
+                end;
+
+            #{<<"action">> := A} ->
+                {error, iolist_to_binary([<<"Missing request parameters for action ">>, A])}
         end,
+
     case Res of
         {ok, GoodResult} ->
             {ok, GoodResult};
         {error, tictacaae_passive} ->
             {412, <<"tictacaae not active">>};
         {badrpc, nodedown} ->
-            {412, <<"Node is down">>}
+            {412, <<"Node is down">>};
+        {error, Reason} when is_binary(Reason) ->
+            {400, Reason}
     end.
 
 jsonify_report(Report) ->

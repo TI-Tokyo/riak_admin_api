@@ -199,8 +199,8 @@ process_request(Request) ->
             #{<<"action">> := <<"SecurityListPermissions">>} ->
                 {ok, [atom_to_binary(P) || P <- riak_admin_api_ug:all_permissions()]};
 
-            _ ->
-                {error, invalid_spec}
+            #{<<"action">> := A} ->
+                {error, iolist_to_binary([<<"Missing request parameters for action ">>, A])}
         end,
 
     case Res of
@@ -217,7 +217,9 @@ process_request(Request) ->
         {error, invalid_spec} ->
             {400, <<"Invalid parameter">>};
         {error, invalid_arg} ->
-            {400, <<"Invalid parameter">>}
+            {400, <<"Invalid parameter">>};
+        {error, Reason} when is_binary(Reason) ->
+            {400, Reason}
     end.
 
 make_user(

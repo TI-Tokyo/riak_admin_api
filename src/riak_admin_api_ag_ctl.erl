@@ -231,20 +231,23 @@ process_post(
     try
         case riak_admin_api_web:handler_mod(Action) of
             undefined ->
-                {halt, 400, [?TXT_HEADER],
+                {halt, 400, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
                  riak_kv_wm_json:encode(
                    #{error => <<"Invalid request action">>}), []};
+            not_enabled ->
+                {halt, 403, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
+                 riak_kv_wm_json:encode(#{error => <<"Request disabled">>}), []};
             Mod ->
                 case Mod:process_request(Request) of
                     {ok, Res} ->
                         {ok,
-                            {200, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
-                                iolist_to_binary(riak_kv_wm_json:encode(#{result => Res})), true,
-                                ReqBody},
-                            Ctx};
+                         {200, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
+                          iolist_to_binary(riak_kv_wm_json:encode(#{result => Res})), true,
+                          ReqBody},
+                         Ctx};
                     {StatusCode, Err} ->
                         {halt, StatusCode, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
-                            riak_kv_wm_json:encode(#{error => Err}), []}
+                         riak_kv_wm_json:encode(#{error => Err}), []}
                 end
         end
     catch

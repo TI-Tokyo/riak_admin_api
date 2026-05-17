@@ -59,13 +59,18 @@ process_request(Request) ->
                             [Node, R]
                         ),
                         {badrpc, nodedown}
-                end
+                end;
+
+            #{<<"action">> := A} ->
+                {error, iolist_to_binary([<<"Missing request parameters for action ">>, A])}
         end,
     case Res of
         {ok, GoodResult} ->
             {ok, GoodResult};
         {badrpc, nodedown} ->
-            {412, <<"Node is down">>}
+            {412, <<"Node is down">>};
+        {error, Reason} when is_binary(Reason) ->
+            {400, Reason}
     end.
 
 select_preflists(All, <<"all">>) ->

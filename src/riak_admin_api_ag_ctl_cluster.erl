@@ -145,7 +145,7 @@ process_request(Request) ->
                 ),
                 ok;
             #{<<"action">> := A} ->
-                {400, iolist_to_binary([<<"Missing request parameters for action ">>, A])}
+                {error, iolist_to_binary([<<"Missing request parameters for action ">>, A])}
         end,
 
     case Res of
@@ -179,6 +179,8 @@ process_request(Request) ->
             {412, <<"Node is down">>};
         {error, {bad_config, Extra}} ->
             {400, iolist_to_binary([<<"Bad config: ">>, Extra])};
+        {error, Reason} when is_binary(Reason) ->
+            {400, Reason};
         {error, PoorlyUnderstoodReason} ->
             ?LOG_WARNING(
                 "Error serving cluster request ~p: ~p",
