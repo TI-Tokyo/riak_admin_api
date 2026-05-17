@@ -50,7 +50,8 @@
 -record(group_v1, {
     created :: ts(),
     modified :: ts(),
-    permissions :: [permission()]
+    permissions :: [permission()],
+    tags = #{} :: map()
 }).
 -type group() :: #group_v1{}.
 -define(GROUP, #group_v1).

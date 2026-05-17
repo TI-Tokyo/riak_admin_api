@@ -37,12 +37,13 @@ process_request(Request) ->
                 A = [
                     #{
                         name => Name,
-                        created => Created,
-                        modified => Modified,
+                        created => ts2bin(Created),
+                        modified => ts2bin(Modified),
                         expires => Expires,
                         groups => Groups,
                         auth_method => AuthMethod,
-                        permissions => Permissions
+                        permissions => Permissions,
+                        tags => Tags
                     }
                  || {Name, ?USER{
                         groups = Groups,
@@ -50,7 +51,8 @@ process_request(Request) ->
                         modified = Modified,
                         expires = Expires,
                         permissions = Permissions,
-                        auth_details = #{method := AuthMethod}
+                        auth_details = #{method := AuthMethod},
+                        tags = Tags
                     }} <-
                         riak_admin_api_ug:list_users()
                 ],
@@ -97,26 +99,25 @@ process_request(Request) ->
                 A = [
                     #{
                         name => Name,
-                        created => Created,
-                        modified => Modified,
-                        permissions => Permissions
+                        created => ts2bin(Created),
+                        modified => ts2bin(Modified),
+                        permissions => Permissions,
+                        tags => Tags
                     }
                  || {Name, ?GROUP{
                         created = Created,
                         modified = Modified,
-                        permissions = Permissions
+                        permissions = Permissions,
+                        tags = Tags
                     }} <-
                         riak_admin_api_ug:list_groups()
                 ],
                 {ok, A};
             #{
                 <<"action">> := <<"SecurityCreateGroup">>,
-                <<"params">> := #{
-                    <<"name">> := Name,
-                    <<"options">> := Options
-                }
+                <<"params">> := #{<<"name">> := Name} = Params
             } ->
-                case make_group(Options) of
+                case make_group(Params) of
                     {ok, Group} ->
                         riak_admin_api_ug:add_group(Name, Group);
                     ER ->
@@ -227,8 +228,7 @@ make_user(
         }
     } = Params
 ) ->
-    Now = os:system_time(millisecond),
-    Tags = maps:get(<<"tags">>, Params, []),
+    Tags = maps:get(<<"tags">>, Params, #{}),
 
     try
         Expires =
@@ -249,8 +249,6 @@ make_user(
             },
             groups = [],
             permissions = [],
-            created = Now,
-            modified = Now,
             expires = Expires,
             tags = Tags
         }}
@@ -261,17 +259,17 @@ make_user(
 make_user(_) ->
     {error, invalid_spec}.
 
-make_group(#{}) ->
-    Now = os:system_time(millisecond),
+make_group(Params) ->
+    Tags = maps:get(<<"tags">>, Params, #{}),
     {ok, ?GROUP{
-        created = Now,
-        modified = Now,
-        permissions = []
-    }};
-make_group(_) ->
-    {error, invalid_spec}.
+        permissions = [],
+        tags = Tags
+    }}.
 
 validate_permission_(<<"cluster_observer">>, Q) -> [cluster_observer | Q];
 validate_permission_(<<"cluster_admin">>, Q) -> [cluster_admin | Q];
 validate_permission_(<<"security">>, Q) -> [security | Q];
 validate_permission_(_, Q) -> Q.
+
+ts2bin(A) ->
+    list_to_binary(calendar:system_time_to_rfc3339(A, [{unit, millisecond}])).

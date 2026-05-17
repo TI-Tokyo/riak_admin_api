@@ -72,9 +72,10 @@ get_user(Name) ->
 
 -spec add_user(id(), user()) -> ok | {error, already_exists}.
 add_user(Name, User) ->
+    Now = now_ms(),
     Record = User?USER{
-        created = now_ms(),
-        modified = now_ms()
+        created = Now,
+        modified = Now
     },
     case riak_core_metadata:get({?ADMIN_MD_PREFIX, <<"u">>}, Name) of
         undefined ->
@@ -130,8 +131,18 @@ get_group(Name) ->
     end.
 
 -spec add_group(id(), group()) -> ok.
-add_group(Name, Record) ->
-    put_group(Name, Record).
+add_group(Name, Group) ->
+    Now = now_ms(),
+    Record = Group?GROUP{
+        created = Now,
+        modified = Now
+    },
+    case riak_core_metadata:get({?ADMIN_MD_PREFIX, <<"g">>}, Name) of
+        undefined ->
+            put_group(Name, Record);
+        _ ->
+            {error, already_exists}
+    end.
 
 -spec del_group(id()) -> ok | {error, notfound | has_members}.
 del_group(Name) ->
@@ -158,7 +169,7 @@ list_groups() ->
         fun
             ({_, [?TOMBSTONE]}, Acc) ->
                 Acc;
-            ({Name, A}, Acc) ->
+            ({Name, [A|_]}, Acc) ->
                 [{Name, A} | Acc]
         end,
         [],
