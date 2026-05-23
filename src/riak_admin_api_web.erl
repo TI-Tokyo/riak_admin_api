@@ -61,6 +61,7 @@ handler_mod(A) ->
     end.
 
 i(<<"ClusterGetStatus">>) -> {riak_admin_api_ag_ctl_cluster, monitoring};
+i(<<"ClusterPlan">>) -> {riak_admin_api_ag_ctl_cluster, admin};
 i(<<"ClusterClearPlan">>) -> {riak_admin_api_ag_ctl_cluster, admin};
 i(<<"ClusterCommitPlan">>) -> {riak_admin_api_ag_ctl_cluster, admin};
 i(<<"ClusterStageJoin">>) -> {riak_admin_api_ag_ctl_cluster, admin};
@@ -95,6 +96,7 @@ i(<<"SecurityListPermissions">>) -> {riak_admin_api_ag_ctl_security, superuser};
 i(_) -> undefined.
 
 permissions_for(<<"ClusterGetStatus">>) -> [cluster_observer];
+permissions_for(<<"ClusterPlan">>) -> [cluster_observer, cluster_admin];
 permissions_for(<<"ClusterClearPlan">>) -> [cluster_observer, cluster_admin];
 permissions_for(<<"ClusterCommitPlan">>) -> [cluster_observer, cluster_admin];
 permissions_for(<<"ClusterStageJoin">>) -> [cluster_observer, cluster_admin];

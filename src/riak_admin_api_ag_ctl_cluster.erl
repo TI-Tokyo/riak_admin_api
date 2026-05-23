@@ -33,6 +33,13 @@ process_request(Request) ->
         case Request of
             #{<<"action">> := <<"ClusterGetStatus">>} ->
                 get_cluster();
+            #{<<"action">> := <<"ClusterPlan">>} ->
+                case riak_core_claimant:plan() of
+                    {ok, Actions, _Transitions} ->
+                        {ok, #{actions => [#{node => N, action => A} || {N, A} <- Actions]}};
+                    {error, ring_not_ready} ->
+                        {error, ring_not_ready}
+                end;
             #{<<"action">> := <<"ClusterClearPlan">>} ->
                 riak_core_claimant:clear();
             #{<<"action">> := <<"ClusterCommitPlan">>} ->
@@ -155,6 +162,10 @@ process_request(Request) ->
             {ok, GoodResult};
         {error, ring_not_ready} ->
             {425, <<"Ring not ready">>};
+        {error, plan_changed} ->
+            {425, <<"Plan changed">>};
+        {error, not_reachable} ->
+            {425, <<"Node not reachable">>};
         {error, claimant_is_down} ->
             {412, <<"Claimant node is down">>};
         {error, invalid_replacement} ->
@@ -190,7 +201,7 @@ process_request(Request) ->
             {500,
                 iolist_to_binary(
                     [
-                        <<"Unexpected error while processing wm_ctl request ">>,
+                        <<"Unexpected error while processing /ctl request ">>,
                         Action,
                         <<". Check logs around ">>,
                         calendar:system_time_to_rfc3339(erlang:system_time(second)),
