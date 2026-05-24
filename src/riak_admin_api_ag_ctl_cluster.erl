@@ -27,7 +27,7 @@
 -include_lib("kernel/include/logger.hrl").
 
 -spec process_request(#{}) ->
-    {ok, binary() | map()} | {400..500, binary()}.
+    {ok, binary() | map()} | {400 | 404 | 409 | 412 | 425 | 500, binary()}.
 process_request(Request) ->
     Res =
         case Request of

@@ -17,7 +17,7 @@ authenticated clients to:
   treestatus`);
 * manage users and groups (`riak admin security`).
 
-All requests are POSTs, with body as a JSON of the form:
+All requests are POSTs, with body as a JSON object of the form:
 
 ```
 {
@@ -36,12 +36,26 @@ A response will have a JSON object specific to the request under key
 
 ### ClusterGetStatus
 **Permissions required**: cluster\_observer.
+
+Returns the current state of the cluster, collecting items about the
+cluster similar to `riak admin cluster status`.
+
 #### Parameters
 None.
 
 #### Response
-Description of the current status of the cluster. As an
-example, for a cluster of two devrel nodes with no staged changes and
+On success, returns a JSON object of the
+form
+```
+{
+  "current_cluster": [CLUSTER_MEMBER1, ...],
+  "down_nodes" : [DOWN_NODE1, ...],
+  "final_cluster" : [FINAL_MEMBER1, ...],
+  "staged_changes" : [STAGED_CHANGE1, ...],
+  "transfers" : [TRANSFER1, ...]
+}
+```
+Example: for a cluster of two devrel nodes with no staged changes and
 all transfers completed, the response is as follows:
 
 ```
@@ -110,9 +124,65 @@ all transfers completed, the response is as follows:
    }
 }
 ```
+With ongoing transfers, the `"transfers"` key will have elements as
+follows:
+```
+"transfers" :
+  [
+    {
+      "count" : 32,
+      "node" : "dev2@127.0.0.1",
+      "state" : "stopped"
+    },
+    {
+      "count" : 32,
+      "node" : "dev1@127.0.0.1",
+      "state" : "waiting_to_handoff"
+    }
+  ]
+```
+
+With leave/join operations planned, keys `"final_cluster"` and
+`"staged_changes"` will contain the following elements:
+```
+"final_cluster" : [
+   {
+      "name" : "dev2@127.0.0.1",
+      "pending_pct" : 0,
+      "ring_pct" : 0
+   },
+   {
+      "name" : "dev1@127.0.0.1",
+      "pending_pct" : 100,
+      "ring_pct" : 100
+   },
+"staged_changes" : [
+   {
+      "action" : "leave",
+      "name" : "dev2@127.0.0.1"
+   }
+]
+```
+and the `"staged_action"` key in the affected node's `CLUSTER_MEMBER` entry under
+`"current_cluster"` will change from `null` to the corresponding value
+to indicate the action.
+
+### ClusterPlan
+**Permissions required**: cluster\_observer, cluster\_admin.
+#### Parameters
+None.
+#### Response
+On success,
+```
+{"result": "ok"}
+```
+On error,
+```
+{"error": ERROR_STRING}
+```
 
 ### ClusterClearPlan
-**Permissions required**: cluster\_admin.
+**Permissions required**: cluster\_observer, cluster\_admin.
 #### Parameters
 None.
 #### Response
@@ -284,6 +354,7 @@ On success,
 APPENV is a proplist of all Erlang applications and their
 environments, as a string produced by passing it through
 `io_lib:format("~120p\n", [AllAppEnvAsProplist])`.
+
 On error,
 ```
 {"error": ERROR_STRING}
@@ -372,6 +443,31 @@ On error,
 ```
 {"error": ERROR_STRING}
 ```
+
+## Cluster admin request status codes
+
+On success, 200. On error, the status code will be, depending on
+cluster condition:
+
+---
+| Condition | Code |
+---
+| ring_not_ready | 425 |
+| plan_changed | 425 |
+| not_reachable | 425 |
+| claimant_is_down | 412 |
+| invalid_replacement | 409 |
+| already_replacement | 409 |
+| not_member | 404 |
+| not_single_node | 409 |
+| is_claimant | 409 |
+| only_member | 412 |
+| self_join | 409 |
+| already_leaving | 409 |
+| is_up | 412 |
+| nodedown | 412 |
+| bad_config | 400 |
+---
 
 
 ### VnodeGetStatus
