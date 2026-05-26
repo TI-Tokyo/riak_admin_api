@@ -44,8 +44,7 @@ cluster similar to `riak admin cluster status`.
 None.
 
 #### Response
-On success, returns a JSON object of the
-form
+On success, returns a JSON object of the form:
 ```
 {
   "current_cluster": [CLUSTER_MEMBER1, ...],
@@ -167,24 +166,175 @@ and the `"staged_action"` key in the affected node's `CLUSTER_MEMBER` entry unde
 `"current_cluster"` will change from `null` to the corresponding value
 to indicate the action.
 
+
 ### ClusterPlan
 **Permissions required**: cluster\_observer, cluster\_admin.
+
+Get a plan of staged changes. Equivalent to `riak admin cluster plan`.
+
 #### Parameters
-None.
+```
+{"include_transitions" : OPTION }
+```
+Optional, if `OPTION` is "full" (default), key `transitions` will
+include all items returned by `riak_core_claimant:plan/0`. If it is
+`"short"`, `chring.node_entries` and `members[].md` fields from `ring`
+and `new_ring` will be omitted.
+
 #### Response
 On success,
 ```
-{"result": "ok"}
+{"result":
+  {
+    "actions" : ACTIONS,
+    "transitions" : TRANSITIONS
+  }
+}
 ```
+
+Example (with `"include_transitions" : "full"`):
+```
+{
+   "result" : {
+      "actions" : [
+         {
+            "action" : "leave",
+            "node" : "dev2@127.0.0.1"
+         }
+      ],
+      "transitions" : [
+         {
+            "new_ring" : {
+               "chring" : {
+                  "node_entries" : [
+                     {
+                        "idx" : "0",
+                        "node" : "dev1@127.0.0.1"
+                     },
+                     {
+                        "idx" : "22835963083295358096932575511191922182123945984",
+                        "node" : "dev1@127.0.0.1"
+                     },
+...
+                  ],
+                  "num_partitions" : 64
+               },
+               "claimant" : "dev2@127.0.0.1",
+               "clustername" : {
+                  "name" : "dev2@127.0.0.1",
+                  "ts" : "2026-05-24T19:51:16+01:00"
+               },
+               "members" : [
+                  {
+                     "md" : {
+                        "$riak_capabilities" : {
+                           "riak_core:bucket_types" : "[true,false]",
+...
+                        },
+                        "gossip_vsn" : 2,
+                        "participate_in_coverage" : true
+                     },
+                     "member_status" : "valid",
+                     "node" : "dev1@127.0.0.1",
+                     "vclock" : [
+                        {
+                           "counter" : 28,
+                           "node" : "dev1@127.0.0.1",
+                           "ts" : 63946928738
+                        },
+...
+                     ]
+                  },
+...
+               ],
+               "meta" : {
+                  "$nodes_locations_changed" : {
+                     "lastmod" : 63946867882,
+                     "value" : false
+                  }
+               },
+               "next" : [
+                  {
+                     "idx" : "45671926166590716193865151022383844364247891968",
+                     "mods" : [],
+                     "next_owner" : "dev1@127.0.0.1",
+                     "owner" : "dev2@127.0.0.1",
+                     "status" : "awaiting"
+                  },
+...
+               ],
+               "nodename" : "dev2@127.0.0.1",
+               "rvsn" : [
+                  {
+                     "counter" : 7,
+                     "node" : "dev2@127.0.0.1",
+                     "ts" : 63946971039
+                  }
+               ],
+               "seen" : [
+                  {
+                     "nodename" : "dev1@127.0.0.1",
+                     "vclock" : [
+                        {
+                           "counter" : 29,
+                           "node" : "dev1@127.0.0.1",
+                           "ts" : 63946928757
+                        },
+                        {
+                           "counter" : 119,
+                           "node" : "dev2@127.0.0.1",
+                           "ts" : 63946928757
+                        }
+                     ]
+                  },
+                  {
+                     "nodename" : "dev2@127.0.0.1",
+                     "vclock" : [
+                        {
+                           "counter" : 29,
+                           "node" : "dev1@127.0.0.1",
+                           "ts" : 63946928757
+                        },
+                        {
+                           "counter" : 119,
+                           "node" : "dev2@127.0.0.1",
+                           "ts" : 63946928757
+                        }
+                     ]
+                  }
+               ],
+               "vclock" : [
+                  {
+                     "counter" : 29,
+                     "node" : "dev1@127.0.0.1",
+                     "ts" : 63946928757
+                  },
+                  {
+                     "counter" : 120,
+                     "node" : "dev2@127.0.0.1",
+                     "ts" : 63946971039
+                  }
+               ]
+            },
+            "ring" : {
+...
+            }
+```
+
 On error,
 ```
 {"error": ERROR_STRING}
 ```
+
 
 ### ClusterClearPlan
 **Permissions required**: cluster\_observer, cluster\_admin.
+
+Clear the plan of staged changes, if it exists. Equivalent to `riak admin cluster clear`.
+
 #### Parameters
 None.
+
 #### Response
 On success,
 ```
@@ -195,10 +345,15 @@ On error,
 {"error": ERROR_STRING}
 ```
 
+
 ### ClusterCommitPlan
-**Permissions required**: cluster\_admin.
+**Permissions required**: cluster\_observer, cluster\_admin.
+
+Commits the plan. Equivalent to `riak admin cluster commit`.
+
 #### Parameters
 None.
+
 #### Response
 On success,
 ```
@@ -211,7 +366,10 @@ On error,
 
 
 ### ClusterStageJoin
-**Permissions required**: cluster\_admin.
+**Permissions required**: cluster\_observer, cluster\_admin.
+
+
+
 #### Parameters
 ```
 {"node": NODENAME}
@@ -230,7 +388,7 @@ On error,
 
 
 ### ClusterStageLeave
-**Permissions required**: cluster\_admin.
+**Permissions required**: cluster\_observer, cluster\_admin.
 #### Parameters
 ```
 {"node": NODENAME}
@@ -446,12 +604,11 @@ On error,
 
 ## Cluster admin request status codes
 
-On success, 200. On error, the status code will be, depending on
+On success, all requests return 200. On error, the status code will be, depending on
 cluster condition:
 
----
 | Condition | Code |
----
+| ---
 | ring_not_ready | 425 |
 | plan_changed | 425 |
 | not_reachable | 425 |
@@ -467,7 +624,6 @@ cluster condition:
 | is_up | 412 |
 | nodedown | 412 |
 | bad_config | 400 |
----
 
 
 ### VnodeGetStatus

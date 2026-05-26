@@ -36,8 +36,24 @@ process_request(Request) ->
             #{<<"action">> := <<"ClusterPlan">>} ->
                 case riak_core_claimant:plan() of
                     {ok, Actions, Transitions} ->
-                        {ok, #{actions => [jsonify_plan_action(A) || A <- Actions],
-                               transitions => [jsonify_plan_transition(T) || T <- Transitions]}};
+                        TransitionsOption =
+                            case Request of
+                                #{<<"params">> := #{<<"include_transitions">> := A}} ->
+                                    A;
+                                _ ->
+                                    <<"full">>
+                            end,
+                        Res0 = #{actions => [jsonify_plan_action(A) || A <- Actions]},
+                        Res1 =
+                            case TransitionsOption of
+                                <<"full">> ->
+                                    Res0#{transitions => [jsonify_plan_transition(T) || T <- Transitions]};
+                                <<"short">> ->
+                                    Res0#{transitions => [jsonify_plan_transition_lite(T) || T <- Transitions]};
+                                _ ->
+                                    Res0
+                            end,
+                        {ok, Res1};
                     {error, ring_not_ready} ->
                         {error, ring_not_ready}
                 end;
@@ -391,6 +407,12 @@ jsonify_plan_transition({OR, NR}) ->
     #{ring => jsonify_ring(OR),
       new_ring => jsonify_ring(NR)
      }.
+
+jsonify_plan_transition_lite({OR, NR}) ->
+    #{ring => jsonify_ring_lite(OR),
+      new_ring => jsonify_ring_lite(NR)
+     }.
+
 jsonify_ring({chstate_v2,
               NodeName,
               VClock,
@@ -416,6 +438,36 @@ jsonify_ring({chstate_v2,
                  status => atom_to_binary(Status)
                 } || {Idx, Owner, NextOwner, Mods, Status} <- Next],
       members => [jsonify_member(M) || M <- Members],
+      claimant => atom_to_binary(Claimant),
+      seen => [#{nodename => atom_to_binary(N),
+                 vclock => jsonify_vclock(VC)} || {N, VC} <- Seen],
+      rvsn => jsonify_vclock(RVsn)
+     }.
+
+jsonify_ring_lite({chstate_v2,
+                   NodeName,
+                   VClock,
+                   {NumPartitions, _NodeEntries} = _CHRing,
+                   Meta,
+                   {ClusterNameName, {CNMegaSec, CNSec, _}} = _ClusterName,
+                   Next,
+                   Members,
+                   Claimant,
+                   Seen, RVsn}) ->
+    #{nodename => NodeName,
+      vclock => jsonify_vclock(VClock),
+      chring => #{num_partitions => NumPartitions},
+      meta => jsonify_meta(Meta),
+      clustername => #{name => atom_to_binary(ClusterNameName),
+                       ts => iolist_to_binary(
+                               calendar:system_time_to_rfc3339(CNMegaSec * 1_000_000 + CNSec))},
+      next => [#{idx => integer_to_binary(Idx),
+                 owner => atom_to_binary(Owner),
+                 next_owner => atom_to_binary(NextOwner),
+                 mods => [atom_to_binary(M) || M <- Mods],
+                 status => atom_to_binary(Status)
+                } || {Idx, Owner, NextOwner, Mods, Status} <- Next],
+      members => [jsonify_member_lite(M) || M <- Members],
       claimant => atom_to_binary(Claimant),
       seen => [#{nodename => atom_to_binary(N),
                  vclock => jsonify_vclock(VC)} || {N, VC} <- Seen],
@@ -448,6 +500,11 @@ jsonify_member({Node, {MemberStatus, Vclock, MD}}) ->
       member_status => atom_to_binary(MemberStatus),
       vclock => jsonify_vclock(Vclock),
       md => jsonify_md(MD)
+     }.
+jsonify_member_lite({Node, {MemberStatus, Vclock, _MD}}) ->
+    #{node => atom_to_binary(Node),
+      member_status => atom_to_binary(MemberStatus),
+      vclock => jsonify_vclock(Vclock)
      }.
 jsonify_md(MD) ->
     lists:foldl(
