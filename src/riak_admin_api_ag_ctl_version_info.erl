@@ -33,15 +33,9 @@ process_request(Request) ->
         case Request of
             #{
                 <<"action">> := <<"SystemGetVersionInfo">>,
-                <<"params">> := Params
+                <<"params">> := #{<<"node">> := Node_}
             } ->
-                Node =
-                    case maps:get(<<"node">>, Params, undefined) of
-                        undefined ->
-                            node();
-                        Defined ->
-                            binary_to_atom(Defined)
-                    end,
+                Node = binary_to_atom(Node_),
                 try
                     A = rpc:call(Node, riak_kv_util, system_info, []),
                     {ok, A#{https_listeners => get_http_listeners()}}

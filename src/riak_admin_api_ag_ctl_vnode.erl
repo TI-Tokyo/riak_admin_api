@@ -27,21 +27,16 @@
 -include_lib("kernel/include/logger.hrl").
 
 -spec process_request(#{}) ->
-    {ok, map()} | {400..500, binary()}.
+    {ok, map()} | {400 | 412, binary()}.
 process_request(Request) ->
     Res =
         case Request of
             #{
                 <<"action">> := <<"VnodeGetStatus">>,
-                <<"params">> := Params = #{<<"preflists">> := PrefLists_}
+                <<"params">> := #{<<"node">> := Node_,
+                                  <<"preflists">> := PrefLists_}
             } ->
-                Node =
-                    case maps:get(<<"node">>, Params, undefined) of
-                        undefined ->
-                            node();
-                        Defined ->
-                            binary_to_atom(Defined)
-                    end,
+                Node = binary_to_atom(Node_),
                 try
                     Selection = rpc:call(Node, riak_core_vnode_manager, all_index_pid, [
                         riak_kv_vnode
@@ -74,8 +69,9 @@ process_request(Request) ->
 
 select_preflists(All, <<"all">>) ->
     All;
-select_preflists(_All, Some) ->
-    [list_to_integer(A) || A <- Some].
+select_preflists(All, Some) ->
+    OnlyIds = [binary_to_integer(A) || A <- Some],
+    [P || P = {Idx, _} <- All, lists:member(Idx, OnlyIds)].
 
 jsonify_vnode_status_list(AA) when is_list(AA) ->
     map_from_deep_list(

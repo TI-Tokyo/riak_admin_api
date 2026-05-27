@@ -27,21 +27,15 @@
 -include_lib("kernel/include/logger.hrl").
 
 -spec process_request(#{}) ->
-    {ok, map()} | {400..500, binary()}.
+    {ok, map()} | {400 | 412, binary()}.
 process_request(Request) ->
     Res =
         case Request of
             #{
                 <<"action">> := <<"TictacaaeGetStatus">>,
-                <<"params">> := Params
+                <<"params">> := #{<<"node">> := Node_}
             } ->
-                Node =
-                    case maps:get(<<"node">>, Params, undefined) of
-                        undefined ->
-                            node();
-                        Defined ->
-                            binary_to_atom(Defined)
-                    end,
+                Node = binary_to_atom(Node_),
                 try
                     case rpc:call(Node, riak_kv_tictacaae_report, produce, []) of
                         {badrpc, _} ->
