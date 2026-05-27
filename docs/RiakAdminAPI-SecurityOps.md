@@ -1,0 +1,15 @@
+
+SecurityListUsers
+SecurityCreateUser
+SecuritySetUserExpiry
+SecurityDeleteUser
+SecurityListGroups
+SecurityCreateGroup
+SecurityDeleteGroup
+SecurityAddUserGroups
+SecurityDeleteUserGroups
+SecurityAddUserPermissions
+SecurityDeleteUserPermissions
+SecurityAddGroupPermissions
+SecurityDeleteGroupPermissions
+SecurityListPermissions
