@@ -1,12 +1,12 @@
 ---
-title: Object API
+title: Riak Admin API
 nav_order: 1
 layout : default
 ---
 
-# Riak Control API
+# Riak Admin API
 
-Riak Control API provides an AWS-style set of HTTP requests to enable
+Riak Admin API provides an AWS-style set of HTTP requests to enable
 authenticated clients to:
 
 * monitor the state of a cluster and perform operations on nodes,
