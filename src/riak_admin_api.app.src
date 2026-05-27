@@ -7,6 +7,7 @@
         stdlib,
         ssl,
         pbkdf2,
+        clique,
         riak_core,
         riak_kv,
         riak_api

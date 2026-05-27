@@ -667,12 +667,13 @@ cluster condition:
 #### Parameters
 ```
 {
-  "node": NODENAME,
+  "node": NODE,
   "preflists": PREFLISTS
 }
 ```
 PREFLISTS is a list of vnodes as strings (not integers) to fetch the
-status of, or \"all\", on node NODENAME.
+status of, or \"all\", on node NODE.
+
 #### Response
 On success,
 ```

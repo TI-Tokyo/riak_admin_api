@@ -254,7 +254,9 @@ process_post(
         end
     catch
         _t:_e:_st ->
-            ?LOG_WARNING("Unhandled error serving admin-api request ~p: ~p:~p ~p", [Action, _t, _e, _st]),
+            ?LOG_WARNING("Unhandled error serving admin-api request ~p: ~p:~p ~p", [
+                Action, _t, _e, _st
+            ]),
             {halt, 500, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
                 riak_kv_wm_json:encode(
                     #{error => <<"Internal error">>}

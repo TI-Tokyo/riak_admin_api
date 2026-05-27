@@ -47,9 +47,19 @@ process_request(Request) ->
                         Res1 =
                             case TransitionsOption of
                                 <<"full">> ->
-                                    Res0#{transitions => [jsonify_plan_transition(T) || T <- Transitions]};
+                                    Res0#{
+                                        transitions => [
+                                            jsonify_plan_transition(T)
+                                         || T <- Transitions
+                                        ]
+                                    };
                                 <<"short">> ->
-                                    Res0#{transitions => [jsonify_plan_transition_lite(T) || T <- Transitions]};
+                                    Res0#{
+                                        transitions => [
+                                            jsonify_plan_transition_lite(T)
+                                         || T <- Transitions
+                                        ]
+                                    };
                                 _ ->
                                     Res0
                             end,
@@ -399,133 +409,166 @@ nodes_and_claim_percentages(Ring) ->
     ].
 
 jsonify_plan_action({N, A}) ->
-    #{node => atom_to_binary(N),
-      action => atom_to_binary(A)
-     }.
+    #{
+        node => atom_to_binary(N),
+        action => atom_to_binary(A)
+    }.
 
 jsonify_plan_transition({OR, NR}) ->
-    #{ring => jsonify_ring(OR),
-      new_ring => jsonify_ring(NR)
-     }.
+    #{
+        ring => jsonify_ring(OR),
+        new_ring => jsonify_ring(NR)
+    }.
 
 jsonify_plan_transition_lite({OR, NR}) ->
-    #{ring => jsonify_ring_lite(OR),
-      new_ring => jsonify_ring_lite(NR)
-     }.
+    #{
+        ring => jsonify_ring_lite(OR),
+        new_ring => jsonify_ring_lite(NR)
+    }.
 
-jsonify_ring({chstate_v2,
-              NodeName,
-              VClock,
-              {NumPartitions, NodeEntries} = _CHRing,
-              Meta,
-              {ClusterNameName, {CNMegaSec, CNSec, _}} = _ClusterName,
-              Next,
-              Members,
-              Claimant,
-              Seen, RVsn}) ->
-    #{nodename => NodeName,
-      vclock => jsonify_vclock(VClock),
-      chring => #{num_partitions => NumPartitions,
-                  node_entries => [jsonify_node_entry(NE) || NE <- NodeEntries]},
-      meta => jsonify_meta(Meta),
-      clustername => #{name => atom_to_binary(ClusterNameName),
-                       ts => iolist_to_binary(
-                               calendar:system_time_to_rfc3339(CNMegaSec * 1_000_000 + CNSec))},
-      next => [#{idx => integer_to_binary(Idx),
-                 owner => atom_to_binary(Owner),
-                 next_owner => atom_to_binary(NextOwner),
-                 mods => [atom_to_binary(M) || M <- Mods],
-                 status => atom_to_binary(Status)
-                } || {Idx, Owner, NextOwner, Mods, Status} <- Next],
-      members => [jsonify_member(M) || M <- Members],
-      claimant => atom_to_binary(Claimant),
-      seen => [#{nodename => atom_to_binary(N),
-                 vclock => jsonify_vclock(VC)} || {N, VC} <- Seen],
-      rvsn => jsonify_vclock(RVsn)
-     }.
+jsonify_ring(
+    {chstate_v2, NodeName, VClock, {NumPartitions, NodeEntries} = _CHRing, Meta,
+        {ClusterNameName, {CNMegaSec, CNSec, _}} = _ClusterName, Next, Members, Claimant, Seen,
+        RVsn}
+) ->
+    #{
+        nodename => NodeName,
+        vclock => jsonify_vclock(VClock),
+        chring => #{
+            num_partitions => NumPartitions,
+            node_entries => [jsonify_node_entry(NE) || NE <- NodeEntries]
+        },
+        meta => jsonify_meta(Meta),
+        clustername => #{
+            name => atom_to_binary(ClusterNameName),
+            ts => iolist_to_binary(
+                calendar:system_time_to_rfc3339(CNMegaSec * 1_000_000 + CNSec)
+            )
+        },
+        next => [
+            #{
+                idx => integer_to_binary(Idx),
+                owner => atom_to_binary(Owner),
+                next_owner => atom_to_binary(NextOwner),
+                mods => [atom_to_binary(M) || M <- Mods],
+                status => atom_to_binary(Status)
+            }
+         || {Idx, Owner, NextOwner, Mods, Status} <- Next
+        ],
+        members => [jsonify_member(M) || M <- Members],
+        claimant => atom_to_binary(Claimant),
+        seen => [
+            #{
+                nodename => atom_to_binary(N),
+                vclock => jsonify_vclock(VC)
+            }
+         || {N, VC} <- Seen
+        ],
+        rvsn => jsonify_vclock(RVsn)
+    }.
 
-jsonify_ring_lite({chstate_v2,
-                   NodeName,
-                   VClock,
-                   {NumPartitions, _NodeEntries} = _CHRing,
-                   Meta,
-                   {ClusterNameName, {CNMegaSec, CNSec, _}} = _ClusterName,
-                   Next,
-                   Members,
-                   Claimant,
-                   Seen, RVsn}) ->
-    #{nodename => NodeName,
-      vclock => jsonify_vclock(VClock),
-      chring => #{num_partitions => NumPartitions},
-      meta => jsonify_meta(Meta),
-      clustername => #{name => atom_to_binary(ClusterNameName),
-                       ts => iolist_to_binary(
-                               calendar:system_time_to_rfc3339(CNMegaSec * 1_000_000 + CNSec))},
-      next => [#{idx => integer_to_binary(Idx),
-                 owner => atom_to_binary(Owner),
-                 next_owner => atom_to_binary(NextOwner),
-                 mods => [atom_to_binary(M) || M <- Mods],
-                 status => atom_to_binary(Status)
-                } || {Idx, Owner, NextOwner, Mods, Status} <- Next],
-      members => [jsonify_member_lite(M) || M <- Members],
-      claimant => atom_to_binary(Claimant),
-      seen => [#{nodename => atom_to_binary(N),
-                 vclock => jsonify_vclock(VC)} || {N, VC} <- Seen],
-      rvsn => jsonify_vclock(RVsn)
-     }.
+jsonify_ring_lite(
+    {chstate_v2, NodeName, VClock, {NumPartitions, _NodeEntries} = _CHRing, Meta,
+        {ClusterNameName, {CNMegaSec, CNSec, _}} = _ClusterName, Next, Members, Claimant, Seen,
+        RVsn}
+) ->
+    #{
+        nodename => NodeName,
+        vclock => jsonify_vclock(VClock),
+        chring => #{num_partitions => NumPartitions},
+        meta => jsonify_meta(Meta),
+        clustername => #{
+            name => atom_to_binary(ClusterNameName),
+            ts => iolist_to_binary(
+                calendar:system_time_to_rfc3339(CNMegaSec * 1_000_000 + CNSec)
+            )
+        },
+        next => [
+            #{
+                idx => integer_to_binary(Idx),
+                owner => atom_to_binary(Owner),
+                next_owner => atom_to_binary(NextOwner),
+                mods => [atom_to_binary(M) || M <- Mods],
+                status => atom_to_binary(Status)
+            }
+         || {Idx, Owner, NextOwner, Mods, Status} <- Next
+        ],
+        members => [jsonify_member_lite(M) || M <- Members],
+        claimant => atom_to_binary(Claimant),
+        seen => [
+            #{
+                nodename => atom_to_binary(N),
+                vclock => jsonify_vclock(VC)
+            }
+         || {N, VC} <- Seen
+        ],
+        rvsn => jsonify_vclock(RVsn)
+    }.
 
 jsonify_vclock(DD) ->
     [jsonify_dot(D) || D <- DD].
 jsonify_dot({N, {C, T}}) ->
-    #{node => atom_to_binary(N),
-      counter => C,
-      ts => T
-     }.
+    #{
+        node => atom_to_binary(N),
+        counter => C,
+        ts => T
+    }.
 
 jsonify_node_entry({P, N}) ->
-    #{idx => integer_to_binary(P),
-      node => atom_to_binary(N)
-     }.
+    #{
+        idx => integer_to_binary(P),
+        node => atom_to_binary(N)
+    }.
 
 jsonify_meta(D) ->
     lists:foldl(
-      fun({K, V}, Q) -> maps:put(K, jsonify_meta_entry(V), Q) end,
-      #{},
-      dict:to_list(D)).
+        fun({K, V}, Q) -> maps:put(K, jsonify_meta_entry(V), Q) end,
+        #{},
+        dict:to_list(D)
+    ).
 jsonify_meta_entry({meta_entry, Value, Lastmod}) when is_boolean(Value) ->
     #{value => Value, lastmod => Lastmod}.
 
 jsonify_member({Node, {MemberStatus, Vclock, MD}}) ->
-    #{node => atom_to_binary(Node),
-      member_status => atom_to_binary(MemberStatus),
-      vclock => jsonify_vclock(Vclock),
-      md => jsonify_md(MD)
-     }.
+    #{
+        node => atom_to_binary(Node),
+        member_status => atom_to_binary(MemberStatus),
+        vclock => jsonify_vclock(Vclock),
+        md => jsonify_md(MD)
+    }.
 jsonify_member_lite({Node, {MemberStatus, Vclock, _MD}}) ->
-    #{node => atom_to_binary(Node),
-      member_status => atom_to_binary(MemberStatus),
-      vclock => jsonify_vclock(Vclock)
-     }.
+    #{
+        node => atom_to_binary(Node),
+        member_status => atom_to_binary(MemberStatus),
+        vclock => jsonify_vclock(Vclock)
+    }.
 jsonify_md(MD) ->
     lists:foldl(
-      fun({'$riak_capabilities', Caps}, Q) ->
-              maps:put(<<"$riak_capabilities">>, jsonify_caps(Caps), Q);
-         ({gossip_vsn, V}, Q) ->
-              maps:put(<<"gossip_vsn">>, V, Q);
-         ({participate_in_coverage, V}, Q) ->
-              maps:put(<<"participate_in_coverage">>, V, Q);
-         ({K, V}, Q) when is_atom(K) ->
-              maps:put(atom_to_binary(K), iolist_to_binary(io_lib:format("~0p", [V])), Q);
-         (_, Q) ->
-              Q
-      end, #{}, orddict:to_list(MD)).
+        fun
+            ({'$riak_capabilities', Caps}, Q) ->
+                maps:put(<<"$riak_capabilities">>, jsonify_caps(Caps), Q);
+            ({gossip_vsn, V}, Q) ->
+                maps:put(<<"gossip_vsn">>, V, Q);
+            ({participate_in_coverage, V}, Q) ->
+                maps:put(<<"participate_in_coverage">>, V, Q);
+            ({K, V}, Q) when is_atom(K) ->
+                maps:put(atom_to_binary(K), iolist_to_binary(io_lib:format("~0p", [V])), Q);
+            (_, Q) ->
+                Q
+        end,
+        #{},
+        orddict:to_list(MD)
+    ).
 jsonify_caps(Caps) ->
     maps:from_list(
-      [{iolist_to_binary([atom_to_binary(M), $:, atom_to_binary(C)]),
-        iolist_to_binary(io_lib:format("~0p", [V]))} || {{M, C}, V} <- Caps]).
-
-
-
+        [
+            {
+                iolist_to_binary([atom_to_binary(M), $:, atom_to_binary(C)]),
+                iolist_to_binary(io_lib:format("~0p", [V]))
+            }
+         || {{M, C}, V} <- Caps
+        ]
+    ).
 
 collect_app_env(Node) when Node == node() ->
     riak_kv_util:collect_all_app_env();

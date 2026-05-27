@@ -117,12 +117,8 @@ process_request(Request) ->
                 <<"action">> := <<"SecurityCreateGroup">>,
                 <<"params">> := #{<<"name">> := Name} = Params
             } ->
-                case make_group(Params) of
-                    {ok, Group} ->
-                        riak_admin_api_ug:add_group(Name, Group);
-                    ER ->
-                        ER
-                end;
+                {ok, Group} = make_group(Params),
+                riak_admin_api_ug:add_group(Name, Group);
             #{
                 <<"action">> := <<"SecurityDeleteGroup">>,
                 <<"params">> := #{<<"name">> := Name}

@@ -48,8 +48,8 @@
 -define(USER, #user_v1).
 
 -record(group_v1, {
-    created :: ts(),
-    modified :: ts(),
+    created :: undefined | ts(),
+    modified :: undefined | ts(),
     permissions :: [permission()],
     tags = #{} :: map()
 }).
