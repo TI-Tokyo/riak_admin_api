@@ -36,12 +36,11 @@ A response will have a JSON object specific to the request under key
 
 ### ClusterGetStatus
 **Permissions required**: cluster\_observer.
+#### Parameters
+None.
 
 Returns the current state of the cluster, collecting items about the
 cluster similar to `riak admin cluster status`.
-
-#### Parameters
-None.
 
 #### Response
 On success, returns a JSON object of the form:
@@ -170,16 +169,17 @@ to indicate the action.
 ### ClusterPlan
 **Permissions required**: cluster\_observer, cluster\_admin.
 
-Get a plan of staged changes. Equivalent to `riak admin cluster plan`.
-
 #### Parameters
 ```
 {"include_transitions" : OPTION }
 ```
-Optional, if `OPTION` is "full" (default), key `transitions` will
-include all items returned by `riak_core_claimant:plan/0`. If it is
-`"short"`, `chring.node_entries` and `members[].md` fields from `ring`
-and `new_ring` will be omitted.
+
+Get a plan of staged changes. Equivalent to `riak admin cluster plan`.
+
+Parameter `"include_transitions"` is optional; if `OPTION` is "full"
+(default), key `transitions` will include all items returned by
+`riak_core_claimant:plan/0`. If it is `"short"`, `chring.node_entries`
+and `members[].md` fields from `ring` and `new_ring` will be omitted.
 
 #### Response
 On success,
@@ -329,11 +329,10 @@ On error,
 
 ### ClusterClearPlan
 **Permissions required**: cluster\_observer, cluster\_admin.
-
-Clear the plan of staged changes, if it exists. Equivalent to `riak admin cluster clear`.
-
 #### Parameters
 None.
+
+Clear the plan of staged changes, if it exists. Equivalent to `riak admin cluster clear`.
 
 #### Response
 On success,
@@ -348,11 +347,10 @@ On error,
 
 ### ClusterCommitPlan
 **Permissions required**: cluster\_observer, cluster\_admin.
-
-Commits the plan. Equivalent to `riak admin cluster commit`.
-
 #### Parameters
 None.
+
+Commits the plan. Equivalent to `riak admin cluster commit`.
 
 #### Response
 On success,
@@ -368,13 +366,15 @@ On error,
 ### ClusterStageJoin
 **Permissions required**: cluster\_observer, cluster\_admin.
 
-
-
 #### Parameters
 ```
-{"node": NODENAME}
+{"node": NODE}
 ```
 NODENAME is the node to stage for joining the cluster.
+
+Equivalent to `riak admin cluster join NODE`.
+
+Stage a node to join the cluster.
 
 #### Response
 On success,
@@ -391,9 +391,14 @@ On error,
 **Permissions required**: cluster\_observer, cluster\_admin.
 #### Parameters
 ```
-{"node": NODENAME}
+{"node": NODE}
 ```
-NODENAME is the node to stage for leaving the cluster.
+NODENAME is the node to stage for leaving.
+
+Equivalent to `riak admin cluster leave NODE`.
+
+Stage a node to leave the cluster. If committed, the affected node
+will hand off all its data to other nodes in the cluster and shut down.
 
 #### Response
 On success,
@@ -407,12 +412,20 @@ On error,
 
 
 ### ClusterStageRemove
-**Permissions required**: cluster\_admin.
+**Permissions required**: cluster\_observer, cluster\_admin.
 #### Parameters
 ```
-{"node": NODENAME}
+{"node": NODE}
 ```
-NODENAME is the node to stage for removing from the cluster.
+NODENAME is the node to stage for removing.
+
+Equivalent to `riak admin cluster remove NODE`.
+
+Stage a request for a node to be forcefully removed from the cluster.
+If committed, all partitions owned by the node will immediately be
+reassigned to other nodes.  No data on the affected node will be transfered to
+other nodes, and all replicas on it will be lost.
+
 #### Response
 On success,
 ```
@@ -425,12 +438,20 @@ On error,
 
 
 ### ClusterStageReplace
-**Permissions required**: cluster\_admin.
+**Permissions required**: cluster\_observer, cluster\_admin.
 #### Parameters
 ```
-{"node": NODENAME, "with": REPLACEMENT}
+{"node": NODE1, "with": NODE2}
 ```
 NODENAME is the node to be replaced with REPLACEMENT.
+
+Equivalent to `riak admin cluster replace NODE1 NODE2`.
+
+Stage a node to be replaced with another in the cluster.  When
+committed, node NODE1 will handoff all of its data to NODE2 and then
+shut down. The current implementation requires NODE2 to be a fresh node that
+is joining the cluster and does not yet own any partitions of its own.
+
 #### Response
 On success,
 ```
@@ -443,12 +464,20 @@ On error,
 
 
 ### ClusterStageForceReplace
-**Permissions required**: cluster\_admin.
+**Permissions required**: cluster\_observer, cluster\_admin.
 #### Parameters
 ```
-{"node": NODENAME, "with": REPLACEMENT}
+{"node": NODE1, "with": NODE2}
 ```
-NODENAME is the node to be force-replaced with REPLACEMENT.
+NODE1 is the node to be force-replaced with NODE2.
+
+Stage a request for NODE1 to be forcefully replaced by NODE2.
+If committed, all partitions owned by NODE1 will immediately be
+reassigned to NODE2.  No data on NODE1 will be transfered,
+and all replicas on NODE1 will be lost. As with `ClusterStageReplace`,
+NODE2 must be a fresh node that is joining the cluster
+and does not yet own any partitions of its own.
+
 #### Response
 On success,
 ```
@@ -461,12 +490,13 @@ On error,
 
 
 ### ClusterDownNode
-**Permissions required**: cluster\_admin.
+**Permissions required**: cluster\_observer, cluster\_admin.
 #### Parameters
 ```
-{"node": NODENAME}
+{"node": NODE}
 ```
-NODENAME is the node to down.
+NODE is the node to mark as 'down'.
+
 #### Response
 On success,
 ```
@@ -479,12 +509,13 @@ On error,
 
 
 ### ClusterStopNode
-**Permissions required**: cluster\_admin.
+**Permissions required**: cluster\_observer, cluster\_admin.
 #### Parameters
 ```
-{"node": NODENAME}
+{"node": NODE}
 ```
-NODENAME is the node to stop.
+NODE is the node to stop.
+
 #### Response
 On success,
 ```
@@ -500,10 +531,11 @@ On error,
 **Permissions required**: cluster\_admin.
 #### Parameters
 ```
-{"node": NODENAME}
+{"node": NODE}
 ```
-NODENAME is the node to collect application environment
+NODE is the node to collect application environment
 variables on.
+
 #### Response
 On success,
 ```
@@ -520,17 +552,18 @@ On error,
 
 
 ### NodePutAppEnv
-**Permissions required**: cluster\_admin.
+**Permissions required**: cluster\_observer, cluster\_admin.
 #### Parameters
 ```
-{"node": NODENAME, "config": CONFIG}
+{"node": NODE, "config": CONFIG}
 ```
-NODENAME is the node to put application environment
+NODE is the node to put application environment
 variables on, and CONFIG is a string that can be parsed with
 `erl_scan:string/1` and `erl_parse:parse_term/1`, of the result of
 printing a proplist of all application environments with
 `io_lib:format/2`,  or a fragment of such proplist. The final `.` is
 not required.
+
 #### Response
 On success,
 ```
@@ -543,12 +576,13 @@ On error,
 
 
 ### NodeGetAdvancedConfig
-**Permissions required**: cluster\_admin.
+**Permissions required**: cluster\_observer, cluster\_admin.
 #### Parameters
 ```
-{"node": NODENAME}
+{"node": NODE}
 ```
 NODENAME is the node to pull advanced.config from.
+
 #### Response
 On success,
 ```
@@ -562,15 +596,16 @@ On error,
 ```
 
 ### NodePutAdvancedConfig
-**Permissions required**: cluster\_admin.
+**Permissions required**: cluster\_observer, cluster\_admin.
 #### Parameters
 ```
-{"node": NODENAME, "config": CONFIG}
+{"node": NODE, "config": CONFIG}
 ```
-NODENAME is the node to put application environment variables on, and
+NODE is the node to put application environment variables on, and
 CONFIG is a string that can be parsed with `erl_scan:string/1` and
 `erl_parse:parse_term/1`, of the the entire contents of
 advanced.config, without a final `.`.
+
 #### Response
 On success,
 ```
@@ -583,16 +618,17 @@ On error,
 
 
 ### NodeRestart
-**Permissions required**: cluster\_admin.
+**Permissions required**: cluster\_observer, cluster\_admin.
 #### Parameters
 ```
-{"node": NODENAME}
+{"node": NODE}
 ```
 NODENAME is the node to restart.
 {: .note }
 > This action requires `riak_deadmanshand`. If it is not running, the
 > request will succeed but the node will not be restarted.
 #### Response
+
 On success,
 ```
 {"result": "ok"}
@@ -608,7 +644,7 @@ On success, all requests return 200. On error, the status code will be, dependin
 cluster condition:
 
 | Condition | Code |
-| ---
+| --- | --- |
 | ring_not_ready | 425 |
 | plan_changed | 425 |
 | not_reachable | 425 |
