@@ -336,7 +336,7 @@ On error,
 ```
 {"node": NODE}
 ```
-NODENAME is the node to stage for joining the cluster.
+NODE is the node to stage for joining the cluster.
 
 Equivalent to `riak admin cluster join NODE`.
 
@@ -359,7 +359,7 @@ On error,
 ```
 {"node": NODE}
 ```
-NODENAME is the node to stage for leaving.
+NODE is the node to stage for leaving.
 
 Equivalent to `riak admin cluster leave NODE`.
 
@@ -383,7 +383,7 @@ On error,
 ```
 {"node": NODE}
 ```
-NODENAME is the node to stage for removing.
+NODE is the node to stage for removing.
 
 Equivalent to `riak admin cluster remove NODE`.
 
@@ -409,7 +409,7 @@ On error,
 ```
 {"node": NODE1, "with": NODE2}
 ```
-NODENAME is the node to be replaced with REPLACEMENT.
+NODE is the node to be replaced with REPLACEMENT.
 
 Equivalent to `riak admin cluster replace NODE1 NODE2`.
 
@@ -547,7 +547,7 @@ On error,
 ```
 {"node": NODE}
 ```
-NODENAME is the node to pull advanced.config from.
+NODE is the node to pull advanced.config from.
 
 ### Response
 On success,
@@ -589,7 +589,7 @@ On error,
 ```
 {"node": NODE}
 ```
-NODENAME is the node to restart.
+NODE is the node to restart.
 {: .note }
 > This action requires `riak_deadmanshand`. If it is not running, the
 > request will succeed but the node will not be restarted.
