@@ -191,12 +191,18 @@ authorize2(
                 true ->
                     {true, Ctx};
                 false ->
-                    {halt, 403, [?JSN_HEADER], riak_kv_wm_json:encode(
-                                                 #{error => <<"Not authorised">>}), []}
+                    {halt, 403, [?JSN_HEADER],
+                        riak_kv_wm_json:encode(
+                            #{error => <<"Not authorised">>}
+                        ),
+                        []}
             end;
         false ->
-            {halt, 403, [?JSN_HEADER], riak_kv_wm_json:encode(
-                                         #{error => <<"Not authenticated">>}), []}
+            {halt, 403, [?JSN_HEADER],
+                riak_kv_wm_json:encode(
+                    #{error => <<"Not authenticated">>}
+                ),
+                []}
     end.
 
 groups_perms(GroupNames) ->
@@ -238,7 +244,7 @@ process_post(Ctx) ->
     case riak_admin_api:status() of
         {false, _} ->
             {halt, 403, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
-             riak_kv_wm_json:encode(#{error => <<"Disabled by admin">>}), []};
+                riak_kv_wm_json:encode(#{error => <<"Disabled by admin">>}), []};
         {true, _} ->
             process_post2(Ctx)
     end.

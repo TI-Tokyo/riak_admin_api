@@ -268,9 +268,9 @@ make_group(Params) ->
     try
         {ok, Perms} = validate_permissions(Perms_),
         {ok, ?GROUP{
-                    permissions = Perms,
-                    tags = Tags
-                   }}
+            permissions = Perms,
+            tags = Tags
+        }}
     catch
         error:_ ->
             {error, invalid_arg}
@@ -279,17 +279,20 @@ make_group(Params) ->
 validate_permissions(PP) ->
     Res =
         lists:foldl(
-          fun(_, false) ->
-                  false;
-             (P, Q) ->
-                  case vp(P) of
-                      false ->
-                          false;
-                      ValidConverted ->
-                          [ValidConverted | Q]
-                  end
-          end,
-          [], PP),
+            fun
+                (_, false) ->
+                    false;
+                (P, Q) ->
+                    case vp(P) of
+                        false ->
+                            false;
+                        ValidConverted ->
+                            [ValidConverted | Q]
+                    end
+            end,
+            [],
+            PP
+        ),
     case Res of
         false ->
             false;
