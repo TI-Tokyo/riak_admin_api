@@ -57,7 +57,7 @@ is_effective() ->
     {ok, Res} = application:get_env(riak_admin_api, admin_api_effective),
     Res.
 
--spec status() -> {enabled | disabled, proplists:proplist()}.
+-spec status() -> {boolean(), proplists:proplist()}.
 status() ->
     {ok, EnabledInConf} = application:get_env(riak_admin_api, admin_api_enabled),
     Enabled = application:get_env(riak_admin_api, admin_api_effective, EnabledInConf),

@@ -6,6 +6,7 @@
         kernel,
         stdlib,
         ssl,
+        public_key,
         pbkdf2,
         clique,
         riak_core,
