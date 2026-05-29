@@ -33,39 +33,75 @@ process_request(Request) ->
         case Request of
             #{
                 <<"action">> := <<"SystemGetVersionInfo">>,
-                <<"params">> := #{<<"node">> := Node_}
+                <<"params">> := #{<<"nodes">> := Nodes_}
             } ->
-                Node = binary_to_atom(Node_),
-                try
-                    A = rpc:call(Node, riak_kv_util, system_info, []),
-                    {ok, A#{https_listeners => get_http_listeners()}}
-                catch
-                    exit:R ->
-                        ?LOG_WARNING(
-                            "rpc call to riak_kv_util:system_info()"
-                            " on node ~s failed: ~p",
-                            [Node, R]
-                        ),
-                        {badrpc, nodedown}
-                end
+                Res2 =
+                    lists:foldl(
+                        fun(N, Q) ->
+                            case catch erpc:call(N, riak_kv_util, system_info, []) of
+                                {'EXIT', _} ->
+                                    maps:put(N, <<"Node not reachable">>, Q);
+                                Info ->
+                                    maps:put(N, Info, Q)
+                            end
+                        end,
+                        #{},
+                        nodes_from_params(Nodes_)
+                    ),
+                {ok, Res2};
+            #{
+                <<"action">> := <<"SystemGetListeners">>,
+                <<"params">> := #{<<"nodes">> := Nodes_}
+            } ->
+                Res2 =
+                    lists:foldl(
+                        fun(N, Q) ->
+                            LL =
+                                lists:foldl(
+                                    fun(K, Q2) ->
+                                        case get_listener(N, K) of
+                                            undefined ->
+                                                Q2;
+                                            A ->
+                                                Q2#{K => A}
+                                        end
+                                    end,
+                                    #{},
+                                    [pb, http, https]
+                                ),
+                            maps:put(N, LL, Q)
+                        end,
+                        #{},
+                        nodes_from_params(Nodes_)
+                    ),
+                {ok, Res2};
+            #{<<"action">> := A} ->
+                {error, iolist_to_binary([<<"Missing request parameters for action ">>, A])}
         end,
     case Res of
         {ok, GoodResult} ->
             {ok, GoodResult};
-        {badrpc, nodedown} ->
-            {412, <<"Node is down">>}
+        {error, Reason} when is_binary(Reason) ->
+            {400, Reason}
     end.
 
-get_http_listeners() ->
-    lists:foldl(
-        fun(N, Q) ->
-            case rpc:call(N, application, get_env, [riak_api, https]) of
-                {ok, [{IP, Port}]} ->
-                    Q#{N => iolist_to_binary(["https://", IP, $:, integer_to_binary(Port)])};
-                _ ->
-                    Q
-            end
-        end,
-        #{},
-        nodes()
-    ).
+nodes_from_params(Nodes_) ->
+    All = [node() | nodes()],
+    case Nodes_ of
+        <<"all">> ->
+            All;
+        Some when is_list(Some) ->
+            [N || N <- All, lists:member(atom_to_binary(N), Some)]
+    end.
+
+get_listener(Node, Kind) ->
+    case catch erpc:call(Node, application, get_env, [riak_api, Kind]) of
+        undefined ->
+            undefined;
+        {ok, [{IP, Port}]} ->
+            iolist_to_binary(
+                io_lib:format("~s://~s:~b", [Kind, IP, Port])
+            );
+        {'EXIT', _} ->
+            <<"Node not reachable">>
+    end.

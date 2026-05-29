@@ -79,6 +79,7 @@ i(<<"NodeRestart">>) -> {riak_admin_api_ag_ctl_cluster, admin};
 i(<<"VnodeGetStatus">>) -> {riak_admin_api_ag_ctl_vnode, monitoring};
 i(<<"TictacaaeGetStatus">>) -> {riak_admin_api_ag_ctl_tictacaae, monitoring};
 i(<<"SystemGetVersionInfo">>) -> {riak_admin_api_ag_ctl_version_info, monitoring};
+i(<<"SystemGetListeners">>) -> {riak_admin_api_ag_ctl_version_info, monitoring};
 i(<<"SecurityListUsers">>) -> {riak_admin_api_ag_ctl_security, superuser};
 i(<<"SecurityCreateUser">>) -> {riak_admin_api_ag_ctl_security, superuser};
 i(<<"SecuritySetUserExpiry">>) -> {riak_admin_api_ag_ctl_security, superuser};
@@ -113,7 +114,8 @@ permissions_for(<<"NodePutAdvancedConfig">>) -> [cluster_observer, cluster_admin
 permissions_for(<<"NodeRestart">>) -> [cluster_observer, cluster_admin];
 permissions_for(<<"VnodeGetStatus">>) -> [cluster_observer];
 permissions_for(<<"TictacaaeGetStatus">>) -> [cluster_observer];
-permissions_for(<<"SystemGetVersionInfo">>) -> [];
+permissions_for(<<"SystemGetVersionInfo">>) -> [cluster_observer];
+permissions_for(<<"SystemGetListeners">>) -> [cluster_observer];
 permissions_for(<<"SecurityListUsers">>) -> [security];
 permissions_for(<<"SecurityCreateUser">>) -> [security];
 permissions_for(<<"SecuritySetUserExpiry">>) -> [security];

@@ -7,9 +7,6 @@ plugins:
 
 url: https://openriak.github.io/quickdocs/
 
-aux_links:
-  "Discuss OpenRiak on GitHub": https://github.com/orgs/OpenRiak/discussions
-
 logo: "/assets/images/OpenRiakSymbol_cropped.png"
 
 favicon_ico: "/assets/images/favicon.ico"

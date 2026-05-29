@@ -1,6 +1,6 @@
 %% -------------------------------------------------------------------
 %%
-%% riak_admin_api_wm_ctl_security: Riak Control, requests
+%% riak_admin_api_wm_ctl_security: Riak Admin API, requests
 %%                                 to manage users, groups and permissions.
 %%
 %% Copyright (c) 2026 TI Tokyo.  All Rights Reserved.

@@ -33,8 +33,10 @@ process_request(Request) ->
         case Request of
             #{
                 <<"action">> := <<"VnodeGetStatus">>,
-                <<"params">> := #{<<"node">> := Node_,
-                                  <<"preflists">> := PrefLists_}
+                <<"params">> := #{
+                    <<"node">> := Node_,
+                    <<"preflists">> := PrefLists_
+                }
             } ->
                 Node = binary_to_atom(Node_),
                 try

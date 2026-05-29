@@ -176,8 +176,9 @@ authorize2(
     Ctx = #context{
         request = #{<<"action">> := Action},
         user = ?USER{
-            permissions = UserPermissions,
-            auth_details = AuthDetails
+            permissions = UserPerms,
+            auth_details = AuthDetails,
+            groups = Groups
         },
         creds = Creds
     }
@@ -185,7 +186,8 @@ authorize2(
     case riak_admin_api_auth:authenticate(AuthDetails, Creds) of
         true ->
             ReqPermissions = riak_admin_api_web:permissions_for(Action),
-            case intersect(UserPermissions, ReqPermissions) of
+            EffectivePerms = UserPerms ++ groups_perms(Groups),
+            case intersect(EffectivePerms, ReqPermissions) of
                 true ->
                     {true, Ctx};
                 false ->
@@ -194,6 +196,17 @@ authorize2(
         false ->
             {halt, 403, <<"Not authenticated">>, Ctx}
     end.
+
+groups_perms(GroupNames) ->
+    lists:usort(
+        lists:flatten(
+            [
+                PPi
+             || {GN, ?GROUP{permissions = PPi}} <- riak_admin_api_ug:list_groups(),
+                lists:member(GN, GroupNames)
+            ]
+        )
+    ).
 
 extract_usercreds(ReqHeaders) ->
     case riak_api_web_headers:get_value('Authorization', ReqHeaders) of
@@ -221,7 +234,16 @@ intersect(_, []) ->
 intersect(AA, BB) ->
     lists:any(fun(A) -> lists:member(A, BB) end, AA).
 
-process_post(
+process_post(Ctx) ->
+    case riak_admin_api:status() of
+        {false, _} ->
+            {halt, 403, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
+             riak_kv_wm_json:encode(#{error => <<"Disabled by admin">>}), []};
+        {true, _} ->
+            process_post2(Ctx)
+    end.
+
+process_post2(
     Ctx = #context{
         request = Request,
         req_body = ReqBody
