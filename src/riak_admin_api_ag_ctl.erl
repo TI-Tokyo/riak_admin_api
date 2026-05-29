@@ -187,14 +187,16 @@ authorize2(
         true ->
             ReqPermissions = riak_admin_api_web:permissions_for(Action),
             EffectivePerms = UserPerms ++ groups_perms(Groups),
-            case intersect(EffectivePerms, ReqPermissions) of
+            case have_all_required(EffectivePerms, ReqPermissions) of
                 true ->
                     {true, Ctx};
                 false ->
-                    {halt, 403, <<"Not authorised">>, Ctx}
+                    {halt, 403, [?JSN_HEADER], riak_kv_wm_json:encode(
+                                                 #{error => <<"Not authorised">>}), []}
             end;
         false ->
-            {halt, 403, <<"Not authenticated">>, Ctx}
+            {halt, 403, [?JSN_HEADER], riak_kv_wm_json:encode(
+                                         #{error => <<"Not authenticated">>}), []}
     end.
 
 groups_perms(GroupNames) ->
@@ -227,12 +229,10 @@ extract_usercreds(ReqHeaders) ->
             undefined
     end.
 
-intersect([], _) ->
+have_all_required(_, []) ->
     true;
-intersect(_, []) ->
-    true;
-intersect(AA, BB) ->
-    lists:any(fun(A) -> lists:member(A, BB) end, AA).
+have_all_required(Eff, Req) ->
+    lists:all(fun(A) -> lists:member(A, Eff) end, Req).
 
 process_post(Ctx) ->
     case riak_admin_api:status() of

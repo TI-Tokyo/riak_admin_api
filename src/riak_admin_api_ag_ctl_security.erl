@@ -117,8 +117,12 @@ process_request(Request) ->
                 <<"action">> := <<"SecurityCreateGroup">>,
                 <<"params">> := #{<<"name">> := Name} = Params
             } ->
-                {ok, Group} = make_group(Params),
-                riak_admin_api_ug:add_group(Name, Group);
+                case make_group(Params) of
+                    {ok, Group} ->
+                        riak_admin_api_ug:add_group(Name, Group);
+                    ER ->
+                        ER
+                end;
             #{
                 <<"action">> := <<"SecurityDeleteGroup">>,
                 <<"params">> := #{<<"name">> := Name}
@@ -147,10 +151,10 @@ process_request(Request) ->
                     <<"permissions">> := Perms_
                 }
             } ->
-                case lists:foldl(fun validate_permission_/2, [], Perms_) of
-                    [] ->
+                case validate_permissions(Perms_) of
+                    false ->
                         {error, invalid_arg};
-                    Perms ->
+                    {ok, Perms} ->
                         riak_admin_api_ug:add_user_permissions(User, Perms)
                 end;
             #{
@@ -160,10 +164,10 @@ process_request(Request) ->
                     <<"permissions">> := Perms_
                 }
             } ->
-                case lists:foldl(fun validate_permission_/2, [], Perms_) of
-                    [] ->
+                case validate_permissions(Perms_) of
+                    false ->
                         {error, invalid_arg};
-                    Perms ->
+                    {ok, Perms} ->
                         riak_admin_api_ug:del_user_permissions(User, Perms)
                 end;
             #{
@@ -173,10 +177,10 @@ process_request(Request) ->
                     <<"permissions">> := Perms_
                 }
             } ->
-                case lists:foldl(fun validate_permission_/2, [], Perms_) of
-                    [] ->
+                case validate_permissions(Perms_) of
+                    false ->
                         {error, invalid_arg};
-                    Perms ->
+                    {ok, Perms} ->
                         riak_admin_api_ug:add_group_permissions(Group, Perms)
                 end;
             #{
@@ -186,10 +190,10 @@ process_request(Request) ->
                     <<"permissions">> := Perms_
                 }
             } ->
-                case lists:foldl(fun validate_permission_/2, [], Perms_) of
-                    [] ->
+                case validate_permissions(Perms_) of
+                    false ->
                         {error, invalid_arg};
-                    Perms ->
+                    {ok, Perms} ->
                         riak_admin_api_ug:del_group_permissions(Group, Perms)
                 end;
             #{<<"action">> := <<"SecurityListPermissions">>} ->
@@ -226,8 +230,10 @@ make_user(
     } = Params
 ) ->
     Tags = maps:get(<<"tags">>, Params, #{}),
+    Perms_ = maps:get(<<"permissions">>, Params, []),
 
     try
+        {ok, Perms} = validate_permissions(Perms_),
         Expires =
             case maps:get(<<"expires">>, Params, <<"never">>) of
                 <<"never">> ->
@@ -245,12 +251,12 @@ make_user(
                 }
             },
             groups = [],
-            permissions = [],
+            permissions = Perms,
             expires = Expires,
             tags = Tags
         }}
     catch
-        error:badarg ->
+        error:_ ->
             {error, invalid_arg}
     end;
 make_user(_) ->
@@ -258,15 +264,43 @@ make_user(_) ->
 
 make_group(Params) ->
     Tags = maps:get(<<"tags">>, Params, #{}),
-    {ok, ?GROUP{
-        permissions = [],
-        tags = Tags
-    }}.
+    Perms_ = maps:get(<<"permissions">>, Params, []),
+    try
+        {ok, Perms} = validate_permissions(Perms_),
+        {ok, ?GROUP{
+                    permissions = Perms,
+                    tags = Tags
+                   }}
+    catch
+        error:_ ->
+            {error, invalid_arg}
+    end.
 
-validate_permission_(<<"cluster_observer">>, Q) -> [cluster_observer | Q];
-validate_permission_(<<"cluster_admin">>, Q) -> [cluster_admin | Q];
-validate_permission_(<<"security">>, Q) -> [security | Q];
-validate_permission_(_, Q) -> Q.
+validate_permissions(PP) ->
+    Res =
+        lists:foldl(
+          fun(_, false) ->
+                  false;
+             (P, Q) ->
+                  case vp(P) of
+                      false ->
+                          false;
+                      ValidConverted ->
+                          [ValidConverted | Q]
+                  end
+          end,
+          [], PP),
+    case Res of
+        false ->
+            false;
+        _ ->
+            {ok, Res}
+    end.
+
+vp(<<"cluster_observer">>) -> cluster_observer;
+vp(<<"cluster_admin">>) -> cluster_admin;
+vp(<<"security">>) -> security;
+vp(_) -> false.
 
 ts2bin(A) ->
     list_to_binary(calendar:system_time_to_rfc3339(A, [{unit, millisecond}])).

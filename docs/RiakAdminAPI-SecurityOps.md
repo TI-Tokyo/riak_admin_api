@@ -56,6 +56,7 @@ Example:
          "password": PASSWORD
       },
    "expires" : EXPIRES,
+   "permissions" : PERMISSIONS,
    "tags" : TAGS
 }
 ```
@@ -64,8 +65,8 @@ Create a user with name NAME and given auth method and credentials
 (only password authentication is currently supported). Keys EXPIRES
 is a string in rfc3339 format or, as an integer, seconds since Unix
 epoch representing a time in future; default is "never".
-TAGS is a dictionary of string or numerical values. EXPIRES and TAGS
-are optional.
+TAGS is a dictionary of string or numerical values. EXPIRES,
+PERMISSIONS and TAGS are optional.
 
 Example:
 ```
