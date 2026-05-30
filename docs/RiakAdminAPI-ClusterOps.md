@@ -300,16 +300,6 @@ None.
 
 Clear the plan of staged changes, if it exists. Equivalent to `riak admin cluster clear`.
 
-### Response
-On success,
-```
-{"result": "ok"}
-```
-On error,
-```
-{"error": ERROR_STRING}
-```
-
 
 ## ClusterCommitPlan
 **Permissions required**: cluster\_observer, cluster\_admin.
@@ -317,16 +307,6 @@ On error,
 None.
 
 Commits the plan. Equivalent to `riak admin cluster commit`.
-
-### Response
-On success,
-```
-{"result": "ok"}
-```
-On error,
-```
-{"error": ERROR_STRING}
-```
 
 
 ## ClusterStageJoin
@@ -342,16 +322,6 @@ Equivalent to `riak admin cluster join NODE`.
 
 Stage a node to join the cluster.
 
-### Response
-On success,
-```
-{"result": "ok"}
-```
-On error,
-```
-{"error": ERROR_STRING}
-```
-
 
 ## ClusterStageLeave
 **Permissions required**: cluster\_observer, cluster\_admin.
@@ -365,16 +335,6 @@ Equivalent to `riak admin cluster leave NODE`.
 
 Stage a node to leave the cluster. If committed, the affected node
 will hand off all its data to other nodes in the cluster and shut down.
-
-### Response
-On success,
-```
-{"result": "ok"}
-```
-On error,
-```
-{"error": ERROR_STRING}
-```
 
 
 ## ClusterStageRemove
@@ -392,16 +352,6 @@ If committed, all partitions owned by the node will immediately be
 reassigned to other nodes.  No data on the affected node will be transfered to
 other nodes, and all replicas on it will be lost.
 
-### Response
-On success,
-```
-{"result": "ok"}
-```
-On error,
-```
-{"error": ERROR_STRING}
-```
-
 
 ## ClusterStageReplace
 **Permissions required**: cluster\_observer, cluster\_admin.
@@ -417,16 +367,6 @@ Stage a node to be replaced with another in the cluster.  When
 committed, node NODE1 will handoff all of its data to NODE2 and then
 shut down. The current implementation requires NODE2 to be a fresh node that
 is joining the cluster and does not yet own any partitions of its own.
-
-### Response
-On success,
-```
-{"result": "ok"}
-```
-On error,
-```
-{"error": ERROR_STRING}
-```
 
 
 ## ClusterStageForceReplace
@@ -444,16 +384,6 @@ and all replicas on NODE1 will be lost. As with `ClusterStageReplace`,
 NODE2 must be a fresh node that is joining the cluster
 and does not yet own any partitions of its own.
 
-### Response
-On success,
-```
-{"result": "ok"}
-```
-On error,
-```
-{"error": ERROR_STRING}
-```
-
 
 ## ClusterDownNode
 **Permissions required**: cluster\_observer, cluster\_admin.
@@ -463,16 +393,6 @@ On error,
 ```
 NODE is the node to mark as 'down'.
 
-### Response
-On success,
-```
-{"result": "ok"}
-```
-On error,
-```
-{"error": ERROR_STRING}
-```
-
 
 ## ClusterStopNode
 **Permissions required**: cluster\_observer, cluster\_admin.
@@ -481,16 +401,6 @@ On error,
 {"node": NODE}
 ```
 NODE is the node to stop.
-
-### Response
-On success,
-```
-{"result": "ok"}
-```
-On error,
-```
-{"error": ERROR_STRING}
-```
 
 
 ## NodeGetAppEnv
@@ -530,16 +440,6 @@ printing a proplist of all application environments with
 `io_lib:format/2`,  or a fragment of such proplist. The final `.` is
 not required.
 
-### Response
-On success,
-```
-{"result": "ok"}
-```
-On error,
-```
-{"error": ERROR_STRING}
-```
-
 
 ## NodeGetAdvancedConfig
 **Permissions required**: cluster\_observer, cluster\_admin.
@@ -572,16 +472,6 @@ CONFIG is a string that can be parsed with `erl_scan:string/1` and
 `erl_parse:parse_term/1`, of the the entire contents of
 advanced.config, without a final `.`.
 
-### Response
-On success,
-```
-{"result": "ok"}
-```
-On error,
-```
-{"error": ERROR_STRING}
-```
-
 
 ## NodeRestart
 **Permissions required**: cluster\_observer, cluster\_admin.
@@ -593,16 +483,7 @@ NODE is the node to restart.
 {: .note }
 > This action requires `riak_deadmanshand`. If it is not running, the
 > request will succeed but the node will not be restarted.
-### Response
 
-On success,
-```
-{"result": "ok"}
-```
-On error,
-```
-{"error": ERROR_STRING}
-```
 
 # Cluster admin request status codes
 

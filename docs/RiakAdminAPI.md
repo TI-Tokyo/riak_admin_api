@@ -49,13 +49,20 @@ Basic auth is currently the only method supported.
 ### Permissions
 
 There are three permissions: `cluster_observer`, `cluster_admin` and
-`security`. To be able to execute a request, users must have required
-permissions (listed in the descriptions of each request), or belong to
-a group with such permissions.  See requests
-`SecurityAddUserPermissions`, `SecurityDeleteUserPermissions`,
-`SecurityAddGroupPermissions`, `SecurityDeleteGroupPermissions`.
+`security`. To be able to execute a request, user's own permissions
+combined with all permissions from groups they are a member of, must
+include all required permissions of that request (listed in the
+descriptions of each request).  See requests `SecurityAddUserPermissions`,
+`SecurityDeleteUserPermissions`, `SecurityAddGroupPermissions`,
+`SecurityDeleteGroupPermissions`.
 
-### Requests
+### User expiry
+
+Users are automatically deleted if they are accessed (e.g., with
+`SecurityListUsers`) or attempt to execute a request on or after the
+date in their `expires` field (unless it is `"never"`).
+
+## Requests
 
 Except for ping, all requests are POSTs, with body as a JSON object of the form:
 
@@ -79,6 +86,18 @@ following sections:
 * [Vnode & backend status](RiakAdminAPI-VnodeOps.md).
 * [TictacAAE tree status](RiakAdminAPI-TictacAAEOps.md).
 * [Security (users, groups, permissions etc)](RiakAdminAPI-SecurityOps.md)
+
+Unless stated specifically, the standard response is:
+
+On success,
+```
+{"result": "ok"}
+```
+On error,
+```
+{"error": ERROR_STRING}
+```
+
 
 ### CLI commands
 
