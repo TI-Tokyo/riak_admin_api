@@ -164,7 +164,7 @@ Example:
    "action" : "SecurityCreateGroup",
    "params" :
       {
-         "name" : "Tristram",
+         "name" : "Philip",
          "permissions" : ["security"],
          "tags" : { "tag1" : "see tag1" }
       }
@@ -185,9 +185,102 @@ Delete group NAME.
 
 
 ## SecurityAddUserGroups
-SecurityDeleteUserGroups
-SecurityAddUserPermissions
-SecurityDeleteUserPermissions
-SecurityAddGroupPermissions
-SecurityDeleteGroupPermissions
-SecurityListPermissions
+**Permissions required**: security.
+
+### Parameters
+```
+{
+   "user" : USER,
+   "groups" : GROUPS
+}
+```
+
+Add USER to GROUPS (a list of strings).
+
+
+## SecurityDeleteUserGroups
+**Permissions required**: security.
+
+### Parameters
+```
+{
+   "user" : USER,
+   "groups" : GROUPS
+}
+```
+
+Remove USER from GROUPS (a list of strings).
+
+
+## SecurityAddUserPermissions
+**Permissions required**: security.
+
+### Parameters
+```
+{
+   "user" : USER,
+   "permissions" : PERMISSIONS
+}
+```
+
+Grant PERMISSIONS (a list of strings; `"all"` _not_ acceptable) to USER.
+
+
+## SecurityDeleteUserPermissions
+**Permissions required**: security.
+
+### Parameters
+```
+{
+   "user" : USER,
+   "permissions" : PERMISSIONS
+}
+```
+
+Revoke PERMISSIONS (`"all"` not acceptable) from USER.
+
+
+## SecurityAddGroupPermissions
+**Permissions required**: security.
+
+### Parameters
+```
+{
+   "group" : GROUP,
+   "permissions" : PERMISSIONS
+}
+```
+
+Grant PERMISSIONS (a list of strings; `"all"` _not_ acceptable) to GROUP.
+
+
+## SecurityDeleteGroupPermissions
+**Permissions required**: security.
+
+### Parameters
+```
+{
+   "group" : GROUP,
+   "permissions" : PERMISSIONS
+}
+```
+
+Revoke PERMISSIONS (`"all"` not acceptable) from GROUP.
+
+
+## SecurityListPermissions
+**Permissions required**: security.
+
+### Parameters
+None.
+
+List permissions. Currently this list contains:
+```
+{
+   "result" : [
+      "cluster_observer",
+      "cluster_admin",
+      "security"
+   ]
+}
+```
