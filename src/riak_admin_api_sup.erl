@@ -60,6 +60,10 @@ init([]) ->
                         id => SMName,
                         start => {riak_api_web_socket, start_link, [WMConfig]},
                         modules => [riak_api_web_socket]
+                    },
+                    #{
+                        id => riak_admin_api_ug,
+                        start => {riak_admin_api_ug, start_link, []}
                     }
                 ],
             {ok, {SupFlags, ChildSpecs}};
