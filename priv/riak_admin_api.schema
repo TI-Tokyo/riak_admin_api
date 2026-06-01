@@ -1,0 +1,41 @@
+%%-*- mode: erlang -*-
+
+%% @doc /ctl endpoint kill switch.
+{mapping, "admin_api_enabled", "riak_admin_api.admin_api_enabled", [
+  {datatype, {flag, true, false}},
+  {default, false}
+]}.
+
+%% @doc IP and port the admin API http server will bind.
+{mapping, "listener.admin.https.$name", "riak_admin_api.https", [
+  {default, {"{{admin_api_ip}}", {{admin_api_port}} }},
+  {datatype, ip},
+  {include_default, "internal"}
+]}.
+
+{translation,
+ "riak_admin_api.https",
+ fun(Conf) ->
+     HTTPS = cuttlefish_variable:filter_by_prefix("listener.admin.https", Conf),
+     [IP || {_, IP} <- HTTPS]
+ end
+}.
+
+
+%% @doc Enable monitoring requests on /ctl?
+{mapping, "admin_api.security.monitoring", "riak_admin_api.sec_group.monitoring", [
+  {datatype, {flag, enabled, disabled}},
+  {default, enabled}
+]}.
+
+%% @doc Enable cluster admin requests on /ctl?
+{mapping, "admin_api.security.admin", "riak_admin_api.sec_group.admin", [
+  {datatype, {flag, enabled, disabled}},
+  {default, disabled}
+]}.
+
+%% @doc Enable user/group management requests on /ctl?
+{mapping, "admin_api.security.superuser", "riak_admin_api.sec_group.superuser", [
+  {datatype, {flag, enabled, disabled}},
+  {default, disabled}
+]}.

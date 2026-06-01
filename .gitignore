@@ -2,6 +2,8 @@
 *.plt
 log
 logs
-_build
+_build/
+_checkouts/
 rebar3.crashdump
 erl_crash.dump
+rebar.lock

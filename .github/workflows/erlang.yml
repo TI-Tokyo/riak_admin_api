@@ -1,0 +1,39 @@
+name: Erlang CI
+
+on:
+  push:
+    branches:
+      - develop
+      - openriak-4.0
+  pull_request:
+    branches:
+      - develop
+      - openriak-4.0
+
+jobs:
+
+  build:
+
+    name: Test on ${{ matrix.os }} with OTP ${{ matrix.otp }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        otp: [26, 28]
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Erlang/OTP
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{ matrix.otp }}
+      - name: Compile
+        run: ./rebar3 compile
+      - name: Run xref and dialyzer
+        run: ./rebar3 do xref, dialyzer
+      - name: Run eunit
+        run: ./rebar3 as gha do eunit
+      - name: Check format
+        run: ./rebar3 fmt --check
