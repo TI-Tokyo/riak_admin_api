@@ -57,13 +57,16 @@
     nomatch
     | {method_not_allowed, list(riak_api_web_acceptor:method())}
     | {ok, riak_api_web_handler:limits(), #context{}}.
-match_route(Method, Path, _) ->
-    case {Path, Method} of
-        {<<"/ctl">>, 'OPTIONS'} ->
+match_route(Method, _Path, ParsedPath) ->
+    case {ParsedPath, Method} of
+        {[<<"ctl">>, _], 'OPTIONS'} ->
             {ok, size_limits(), #context{method = Method}};
-        {<<"/ctl">>, 'POST'} ->
-            {ok, size_limits(), #context{method = Method}};
-        {<<"/ctl">>, _} ->
+        {[<<"ctl">>, Action], 'POST'} ->
+            {ok, size_limits(), #context{
+                method = Method,
+                request = #{<<"action">> => Action}
+            }};
+        {[<<"ctl">>, _], _} ->
             {method_not_allowed, ['POST', 'OPTIONS']};
         _ ->
             nomatch
@@ -88,13 +91,16 @@ check_permissions(_ReqHeaders, http, _Peer, _Cert, _Ctx) ->
     {halt, 426, [?TXT_HEADER], <<"Upgrade required to https">>, []};
 check_permissions(_ReqHeaders, _Scheme, _Peer, _Cert, Ctx = #context{method = 'OPTIONS'}) ->
     {ok, Ctx};
-check_permissions(_ReqHeaders, _Scheme, _Peer, _Cert, Ctx) ->
+check_permissions(ReqHeaders, _Scheme, _Peer, _Cert, Ctx0) ->
     {ok, Enabled} = application:get_env(riak_admin_api, admin_api_enabled),
     case Enabled of
         true ->
-            %% proper permissions check depends on action,
-            %% which is in request body; therefore, defer checks
-            {ok, Ctx};
+            case authorize(ReqHeaders, Ctx0) of
+                {true, Ctx1} ->
+                    {ok, Ctx1};
+                HaltResponse ->
+                    HaltResponse
+            end;
         false ->
             {halt, 428, [?TXT_HEADER], <<"Service unavailable">>, []}
     end.
@@ -114,23 +120,8 @@ parse_query_params(_, _Ctx) ->
     #context{}
 ) ->
     {ok, #context{}} | riak_api_web_acceptor:halt_response().
-parse_request_headers(_, Ctx = #context{method = 'OPTIONS'}) ->
-    {ok, Ctx};
-parse_request_headers(ReqHeaders, Ctx) ->
-    case extract_usercreds(ReqHeaders) of
-        undefined ->
-            {halt, 401, [?TXT_HEADER], <<"Missing user or credentials">>, []};
-        {Name, Creds} ->
-            case riak_admin_api_ug:get_user(Name) of
-                {error, notfound} ->
-                    {halt, 401, [?TXT_HEADER], <<"Unauthorized">>, []};
-                {ok, User} ->
-                    {ok, Ctx#context{
-                        user = User,
-                        creds = Creds
-                    }}
-            end
-    end.
+parse_request_headers(_, Ctx) ->
+    {ok, Ctx}.
 
 -spec process_request(
     riak_api_web_body:req_body() | none,
@@ -152,24 +143,94 @@ process_request(ReqBody, #context{method = 'OPTIONS'} = Ctx) ->
     {ok, {200, riak_admin_api_web:cors_headers(), <<>>, true, ReqBody}, Ctx};
 process_request(none, _Ctx) ->
     {halt, 400, [?TXT_HEADER], <<"No request body">>, []};
-process_request(ReqBody, Ctx0) ->
-    case authorize(ReqBody, Ctx0) of
-        {true, Ctx1} ->
-            process_post(Ctx1);
-        HaltResponse ->
-            HaltResponse
+process_request(ReqBody, Ctx) ->
+    case riak_admin_api:status() of
+        {false, _} ->
+            {halt, 403, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
+                riak_kv_wm_json:encode(#{error => <<"Disabled by admin">>}), []};
+        {true, _} ->
+            process_post(ReqBody, Ctx)
     end.
 
-authorize(ReqBody, Ctx) ->
+process_post(ReqBody, Ctx = #context{request = Req0}) ->
     case riak_api_web_body:get_body(ReqBody, all, ?MAX_REQ_SIZE) of
         {error, content_too_large} ->
             {halt, 413, [], <<>>, []};
         {ObjBody, UpdReqBody} when is_binary(ObjBody) ->
             case catch riak_kv_wm_json:decode(ObjBody) of
                 Request when is_map(Request) ->
-                    authorize2(Ctx#context{request = Request, req_body = UpdReqBody});
+                    process_post2(Ctx#context{
+                        request = maps:merge(Request, Req0),
+                        req_body = UpdReqBody
+                    });
                 _w ->
                     {halt, 400, [?TXT_HEADER], <<"Malformed request">>, []}
+            end
+    end.
+process_post2(
+    Ctx = #context{
+        request = Request,
+        req_body = ReqBody
+    }
+) ->
+    #{<<"action">> := Action} = Request,
+    try
+        case riak_admin_api_web:handler_mod(Action) of
+            undefined ->
+                {halt, 400, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
+                    riak_kv_wm_json:encode(
+                        #{error => <<"Invalid request action">>}
+                    ),
+                    []};
+            not_enabled ->
+                {halt, 403, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
+                    riak_kv_wm_json:encode(#{error => <<"Request disabled">>}), []};
+            Mod ->
+                case Mod:process_request(Request) of
+                    {ok, Res} ->
+                        {ok,
+                            {200, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
+                                iolist_to_binary(riak_kv_wm_json:encode(#{result => Res})), true,
+                                ReqBody},
+                            Ctx};
+                    {StatusCode, Err} ->
+                        {halt, StatusCode, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
+                            riak_kv_wm_json:encode(#{error => Err}), []}
+                end
+        end
+    catch
+        _t:_e:_st ->
+            ?LOG_WARNING("Unhandled error serving admin-api request ~p: ~p:~p ~p", [
+                Action, _t, _e, _st
+            ]),
+            {halt, 500, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
+                riak_kv_wm_json:encode(
+                    #{error => <<"Internal error">>}
+                ),
+                []}
+    end.
+
+authorize(ReqHeaders, Ctx) ->
+    case extract_usercreds(ReqHeaders) of
+        undefined ->
+            {halt, 401, [?JSN_HEADER],
+                riak_kv_wm_json:encode(
+                    #{error => <<"Missing user or credentials">>}
+                ),
+                []};
+        {Name, Creds} ->
+            case riak_admin_api_ug:get_user(Name) of
+                {error, notfound} ->
+                    {halt, 401, [?JSN_HEADER],
+                        riak_kv_wm_json:encode(
+                            #{error => <<"Unauthorized">>}
+                        ),
+                        []};
+                {ok, User} ->
+                    authorize2(Ctx#context{
+                        user = User,
+                        creds = Creds
+                    })
             end
     end.
 authorize2(
@@ -239,58 +300,6 @@ have_all_required(_, []) ->
     true;
 have_all_required(Eff, Req) ->
     lists:all(fun(A) -> lists:member(A, Eff) end, Req).
-
-process_post(Ctx) ->
-    case riak_admin_api:status() of
-        {false, _} ->
-            {halt, 403, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
-                riak_kv_wm_json:encode(#{error => <<"Disabled by admin">>}), []};
-        {true, _} ->
-            process_post2(Ctx)
-    end.
-
-process_post2(
-    Ctx = #context{
-        request = Request,
-        req_body = ReqBody
-    }
-) ->
-    #{<<"action">> := Action} = Request,
-    try
-        case riak_admin_api_web:handler_mod(Action) of
-            undefined ->
-                {halt, 400, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
-                    riak_kv_wm_json:encode(
-                        #{error => <<"Invalid request action">>}
-                    ),
-                    []};
-            not_enabled ->
-                {halt, 403, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
-                    riak_kv_wm_json:encode(#{error => <<"Request disabled">>}), []};
-            Mod ->
-                case Mod:process_request(Request) of
-                    {ok, Res} ->
-                        {ok,
-                            {200, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
-                                iolist_to_binary(riak_kv_wm_json:encode(#{result => Res})), true,
-                                ReqBody},
-                            Ctx};
-                    {StatusCode, Err} ->
-                        {halt, StatusCode, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
-                            riak_kv_wm_json:encode(#{error => Err}), []}
-                end
-        end
-    catch
-        _t:_e:_st ->
-            ?LOG_WARNING("Unhandled error serving admin-api request ~p: ~p:~p ~p", [
-                Action, _t, _e, _st
-            ]),
-            {halt, 500, riak_admin_api_web:cors_headers() ++ [?JSN_HEADER],
-                riak_kv_wm_json:encode(
-                    #{error => <<"Internal error">>}
-                ),
-                []}
-    end.
 
 -spec record_request(
     riak_api_web_handler:timings(),

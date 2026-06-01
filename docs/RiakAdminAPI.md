@@ -64,11 +64,11 @@ date in their `expires` field (unless it is `"never"`).
 
 ## Requests
 
-Except for ping, all requests are POSTs, with body as a JSON object of the form:
+Except for ping, all requests are POSTs to /ctl/ACTION, with body as a
+JSON object of the form:
 
 ```
 {
-   "action" : ACTION,
    "params" : PARAMETERS
 }
 ```
