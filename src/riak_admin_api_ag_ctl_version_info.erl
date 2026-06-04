@@ -90,6 +90,8 @@ nodes_from_params(Nodes_) ->
     case Nodes_ of
         <<"all">> ->
             All;
+        <<"this">> ->
+            [node()];
         Some when is_list(Some) ->
             [N || N <- All, lists:member(atom_to_binary(N), Some)]
     end.
