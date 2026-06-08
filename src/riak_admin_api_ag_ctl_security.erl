@@ -39,7 +39,7 @@ process_request(Request) ->
                         name => Name,
                         created => ts2bin(Created),
                         modified => ts2bin(Modified),
-                        expires => Expires,
+                        expires => ts2bin(Expires),
                         groups => Groups,
                         auth_method => AuthMethod,
                         permissions => Permissions,
@@ -239,7 +239,13 @@ make_user(
                 <<"never">> ->
                     never;
                 Defined ->
-                    binary_to_integer(Defined)
+                    case catch binary_to_integer(Defined) of
+                        Secs when is_integer(Secs) ->
+                            Secs * 1000;
+                        _ ->
+                            calendar:rfc3339_to_system_time(
+                                         binary_to_list(Defined), [{unit, millisecond}])
+                    end
             end,
         {Hash, Salt} = riak_admin_api_auth:hash_password(Password),
         {ok, ?USER{
@@ -305,5 +311,7 @@ vp(<<"cluster_admin">>) -> cluster_admin;
 vp(<<"security">>) -> security;
 vp(_) -> false.
 
+ts2bin(never) ->
+    <<"never">>;
 ts2bin(A) ->
     list_to_binary(calendar:system_time_to_rfc3339(A, [{unit, millisecond}])).
