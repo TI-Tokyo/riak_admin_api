@@ -41,6 +41,7 @@
     list_groups/0,
 
     set_user_expiry/2,
+    set_user_tags/2,
     add_user_groups/2,
     del_user_groups/2,
     add_user_permissions/2,
@@ -80,6 +81,10 @@ del_user(Name) ->
 -spec set_user_expiry(id(), never | non_neg_integer()) -> ok | {error, invalid_arg | notfound}.
 set_user_expiry(Name, Expires) ->
     gen_server:call(?SERVER, {set_user_expiry, Name, Expires}, infinity).
+
+-spec set_user_tags(id(), #{}) -> ok | {error, notfound}.
+set_user_tags(Name, Tags) ->
+    gen_server:call(?SERVER, {set_user_tags, Name, Tags}, infinity).
 
 -spec list_users() -> [{id(), user()}].
 list_users() ->
@@ -143,6 +148,8 @@ handle_call({del_user, Name}, _From, State) ->
     {reply, do_del_user(Name, State), State};
 handle_call({set_user_expiry, Name, Expires}, _From, State) ->
     {reply, do_set_user_expiry(Name, Expires, State), State};
+handle_call({set_user_tags, Name, Tags}, _From, State) ->
+    {reply, do_set_user_tags(Name, Tags, State), State};
 handle_call(list_users, _From, State) ->
     {reply, do_list_users(State), State};
 handle_call({get_group, Name}, _From, State) ->
@@ -234,6 +241,17 @@ do_set_user_expiry(Name, Expires, State) ->
                         modified = now_ms()
                     })
             end
+    end.
+
+do_set_user_tags(Name, Tags, State) ->
+    case do_get_user(Name, State) of
+        {error, notfound} ->
+            {error, notfound};
+        {ok, User} ->
+            put_user(Name, User?USER{
+                tags = Tags,
+                modified = now_ms()
+            })
     end.
 
 do_list_users(_State) ->

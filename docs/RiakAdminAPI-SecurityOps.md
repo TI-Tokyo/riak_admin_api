@@ -104,6 +104,20 @@ Set expiry to EXPIRY (see `SecurityCreateUser` parameters for
 acceptable values) for USER.
 
 
+## SecuritySetUserTags
+**Permissions required**: security.
+
+### Parameters
+```
+{
+   "name" : NAME,
+   "tags" : TAGS
+}
+```
+
+Set tags for USER.
+
+
 ## SecurityDeleteUser
 **Permissions required**: security.
 

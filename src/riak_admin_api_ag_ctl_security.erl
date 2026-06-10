@@ -83,14 +83,22 @@ process_request(Request) ->
                                 Millis;
                             MustBeRfc3339 ->
                                 calendar:rfc3339_to_system_time(
-                                  binary_to_list(MustBeRfc3339), [{unit, millisecond}])
+                                    binary_to_list(MustBeRfc3339), [{unit, millisecond}]
+                                )
                         end,
-                    ?LOG_NOTICE("Expires_: ~p", [Expires]),
                     riak_admin_api_ug:set_user_expiry(Name, Expires)
                 catch
                     error:badarg ->
                         {error, invalid_arg}
                 end;
+            #{
+                <<"action">> := <<"SecuritySetUserTags">>,
+                <<"params">> := #{
+                    <<"name">> := Name,
+                    <<"tags">> := Tags
+                }
+            } ->
+                riak_admin_api_ug:set_user_tags(Name, Tags);
             #{
                 <<"action">> := <<"SecurityDeleteUser">>,
                 <<"params">> := #{<<"name">> := Name}
@@ -245,7 +253,8 @@ make_user(
                             Secs * 1000;
                         _ ->
                             calendar:rfc3339_to_system_time(
-                                         binary_to_list(Defined), [{unit, millisecond}])
+                                binary_to_list(Defined), [{unit, millisecond}]
+                            )
                     end
             end,
         {Hash, Salt} = riak_admin_api_auth:hash_password(Password),
