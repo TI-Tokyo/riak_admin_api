@@ -82,7 +82,8 @@ process_request(Request) ->
                             Millis when is_integer(Millis) ->
                                 Millis;
                             MustBeRfc3339 ->
-                                calendar:rfc3339_to_system_time(MustBeRfc3339, [{unit, millisecond}])
+                                calendar:rfc3339_to_system_time(
+                                  binary_to_list(MustBeRfc3339), [{unit, millisecond}])
                         end,
                     ?LOG_NOTICE("Expires_: ~p", [Expires]),
                     riak_admin_api_ug:set_user_expiry(Name, Expires)
