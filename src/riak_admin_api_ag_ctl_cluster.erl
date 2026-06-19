@@ -33,6 +33,7 @@ process_request(Request) ->
         case Request of
             #{<<"action">> := <<"ClusterGetStatus">>} ->
                 get_cluster();
+
             #{<<"action">> := <<"ClusterPlan">>} ->
                 case riak_core_claimant:plan() of
                     {ok, Actions, Transitions} ->
@@ -67,21 +68,24 @@ process_request(Request) ->
                     {error, ring_not_ready} ->
                         {error, ring_not_ready}
                 end;
+
             #{<<"action">> := <<"ClusterClearPlan">>} ->
                 riak_core_claimant:clear();
+
             #{<<"action">> := <<"ClusterCommitPlan">>} ->
                 riak_core_claimant:commit();
+
             #{
                 <<"action">> := <<"ClusterStageJoin">>,
                 <<"params">> := #{<<"node">> := A}
-            } ->
+            } when is_binary(A) ->
                 Node = binary_to_atom(A),
                 {ok, Ring} = riak_core_ring_manager:get_my_ring(),
                 case riak_core_ring:all_members(Ring) of
                     [_Me] ->
                         riak_core:staged_join(Node);
                     _ ->
-                        try rpc:call(Node, riak_core, staged_join, [node()]) of
+                        try erpc:call(Node, riak_core, staged_join, [node()]) of
                             X -> X
                         catch
                             exit:R ->
@@ -92,69 +96,84 @@ process_request(Request) ->
                                 {badrpc, nodedown}
                         end
                 end;
+
             #{
                 <<"action">> := <<"ClusterStageLeave">>,
                 <<"params">> := #{<<"node">> := A}
-            } ->
-                riak_core_claimant:leave_member(binary_to_atom(A));
+            } when is_binary(A) ->
+                riak_core_claimant:leave_member(binary_to_existing_atom(A));
+
             #{
                 <<"action">> := <<"ClusterStageRemove">>,
                 <<"params">> := #{<<"node">> := A}
-            } ->
-                riak_core_claimant:remove_member(binary_to_atom(A));
+            } when is_binary(A) ->
+                riak_core_claimant:remove_member(binary_to_existing_atom(A));
+
             #{
                 <<"action">> := <<"ClusterStageReplace">>,
                 <<"params">> := #{
                     <<"node">> := A1,
                     <<"with">> := A2
                 }
-            } ->
-                riak_core_claimant:replace(binary_to_atom(A1), binary_to_atom(A2));
+            } when is_binary(A1),
+                   is_binary(A2)->
+                riak_core_claimant:replace(
+                  binary_to_existing_atom(A1), binary_to_existing_atom(A2));
+
             #{
                 <<"action">> := <<"ClusterStageForceReplace">>,
                 <<"params">> := #{
                     <<"node">> := A1,
                     <<"with">> := A2
                 }
-            } ->
-                riak_core_claimant:force_replace(binary_to_atom(A1), binary_to_atom(A2));
+            } when is_binary(A1),
+                   is_binary(A2) ->
+                riak_core_claimant:force_replace(
+                  binary_to_existing_atom(A1), binary_to_existing_atom(A2));
+
             #{
                 <<"action">> := <<"ClusterDownNode">>,
                 <<"params">> := #{<<"node">> := A}
-            } ->
-                riak_core:down(binary_to_atom(A));
+            } when is_binary(A) ->
+                riak_core:down(binary_to_existing_atom(A));
+
             #{
                 <<"action">> := <<"ClusterStopNode">>,
                 <<"params">> := #{<<"node">> := A}
-            } ->
-                Node = binary_to_atom(A),
-                try rpc:call(Node, riak_core, stop, []) of
+            } when is_binary(A) ->
+                Node = binary_to_existing_atom(A),
+                try erpc:call(Node, riak_core, stop, []) of
                     X -> X
                 catch
                     exit:R ->
                         ?LOG_WARNING("node stop on ~s failed: ~p", [Node, R]),
                         {badrpc, nodedown}
                 end;
+
             #{
                 <<"action">> := <<"NodeGetAppEnv">>,
                 <<"params">> := #{<<"node">> := A}
-            } ->
+            } when is_binary(A) ->
                 AllAppEnvs = collect_app_env(binary_to_atom(A)),
                 {ok, iolist_to_binary(io_lib:format("~120p", [AllAppEnvs]))};
+
             #{
                 <<"action">> := <<"NodePutAppEnv">>,
                 <<"params">> := #{
                     <<"node">> := A,
                     <<"config">> := B
                 }
-            } ->
-                apply_app_env(binary_to_atom(A), B);
+            } when is_binary(A),
+                   is_binary(B) ->
+                apply_app_env(binary_to_existing_atom(A), B);
+
             #{
                 <<"action">> := <<"NodeGetAdvancedConfig">>,
                 <<"params">> := #{<<"node">> := A}
-            } ->
-                {ok, AdvConfig} = get_advanced_config(binary_to_atom(A)),
+            } when is_binary(A) ->
+                {ok, AdvConfig} = get_advanced_config(binary_to_existing_atom(A)),
                 {ok, iolist_to_binary(io_lib:format("~120p", [AdvConfig]))};
+
             #{
                 <<"action">> := <<"NodePutAdvancedConfig">>,
                 <<"params">> := #{
@@ -162,12 +181,13 @@ process_request(Request) ->
                     <<"config">> := B
                 }
             } ->
-                write_advanced_config(binary_to_atom(A), B);
+                write_advanced_config(binary_to_existing_atom(A), B);
+
             #{
                 <<"action">> := <<"NodeRestart">>,
                 <<"params">> := #{<<"node">> := A}
-            } ->
-                ok = signal_restart(binary_to_atom(A)),
+            } when is_binary(A) ->
+                ok = signal_restart(binary_to_existing_atom(A)),
                 spawn(
                     fun() ->
                         timer:sleep(3000 + 2000),
@@ -178,6 +198,27 @@ process_request(Request) ->
                     end
                 ),
                 ok;
+
+            #{
+                <<"action">> := <<"NodeRepairStatus">>,
+                <<"params">> := #{<<"nodes">> := AA}
+            } ->
+                node_repair_status([binary_to_existing_atom(A) || A <- AA]);
+
+            #{
+                <<"action">> := <<"NodeRepairStart">>,
+                <<"params">> := #{<<"node">> := A}
+            } when is_binary(A) ->
+                node_repair_start(binary_to_existing_atom(A));
+
+            #{
+                <<"action">> := <<"NodeRepairStop">>,
+                <<"params">> := #{<<"node">> := A,
+                                  <<"reason">> := B}
+            } when is_binary(A),
+                   is_binary(B) ->
+                node_repair_stop(binary_to_existing_atom(A), binary_to_list(B));
+
             #{<<"action">> := A} ->
                 {error, iolist_to_binary([<<"Missing request parameters for action ">>, A])}
         end,
@@ -217,6 +258,8 @@ process_request(Request) ->
             {412, <<"Node is down">>};
         {error, {bad_config, Extra}} ->
             {400, iolist_to_binary([<<"Bad config: ">>, Extra])};
+        {error, repair_underway} ->
+            {412, <<"Node exists with ongoing repairs">>};
         {error, Reason} when is_binary(Reason) ->
             {400, Reason};
         {error, PoorlyUnderstoodReason} ->
@@ -355,7 +398,7 @@ get_member_info({Node, Status}, Ring) ->
     PctRing = length(Indices) / RingSize,
     PctPending = length(FutureIndices) / RingSize,
 
-    case rpc:call(Node, riak_kv_util, node_info_for_riak_control, []) of
+    case erpc:call(Node, riak_kv_util, node_info_for_riak_control, []) of
         {badrpc, _} ->
             [
                 {node, Node},
@@ -573,7 +616,7 @@ jsonify_caps(Caps) ->
 collect_app_env(Node) when Node == node() ->
     riak_kv_util:collect_all_app_env();
 collect_app_env(Node) ->
-    rpc:call(Node, riak_kv_util, collect_all_app_env, []).
+    erpc:call(Node, riak_kv_util, collect_all_app_env, []).
 
 apply_app_env(Node, AppEE_s) ->
     case
@@ -594,12 +637,12 @@ apply_app_env(Node, AppEE_s) ->
 apply_app_env2(Node, AppEE) when Node == node() ->
     riak_kv_util:apply_app_env(AppEE);
 apply_app_env2(Node, AppEE) ->
-    rpc:call(Node, riak_kv_util, apply_app_env, [AppEE]).
+    erpc:call(Node, riak_kv_util, apply_app_env, [AppEE]).
 
 get_advanced_config(Node) when Node == node() ->
     riak_kv_util:get_advanced_config();
 get_advanced_config(Node) ->
-    rpc:call(Node, riak_kv_util, get_advanced_config, []).
+    erpc:call(Node, riak_kv_util, get_advanced_config, []).
 
 write_advanced_config(Node, Blob) ->
     case
@@ -620,9 +663,51 @@ write_advanced_config(Node, Blob) ->
 write_advanced_config2(Node, Blob) when Node == node() ->
     riak_kv_util:write_advanced_config(Blob);
 write_advanced_config2(Node, Blob) ->
-    rpc:call(Node, riak_kv_util, write_advanced_config, [Blob]).
+    erpc:call(Node, riak_kv_util, write_advanced_config, [Blob]).
 
 signal_restart(Node) when Node == node() ->
     riak:deadmanshand_restart();
 signal_restart(Node) ->
-    rpc:call(Node, riak, deadmanshand_restart, []).
+    erpc:call(Node, riak, deadmanshand_restart, []).
+
+
+node_repair_status(NN) ->
+    {ok, [#{node => N,
+            status => node_repair_status_from_node(N)} || N <- NN]}.
+
+node_repair_start(Node) ->
+    case lists:member(Node, [node() | nodes()]) of
+        true ->
+            case any_node_repairs_in_cluster() of
+                true ->
+                    {error, repair_underway};
+                false ->
+                    erpc:call(Node, riak_client, repair_node, [])
+            end;
+        false ->
+            {error, not_reachable}
+    end.
+
+node_repair_status_from_node(Node) ->
+    case lists:member(Node, [node() | nodes()]) of
+        true ->
+            Vnodes = erpc:call(Node, riak_core_vnode_manager, all_vnodes, []),
+            Statuses = [{Mod, Idx, Pid,
+                         erpc:call(Node, riak_core_vnode_manager, repair_status, [{Mod, Idx}])}
+                        || {Mod, Idx, Pid} <- Vnodes],
+            [#{mod => Mod,
+               idx => Idx,
+               pid => list_to_binary(
+                        pid_to_list(Pid))} || {Mod, Idx, Pid, Status} <- Statuses,
+                                              Status /= not_found];
+        false ->
+            <<"unreachable">>
+    end.
+
+any_node_repairs_in_cluster() ->
+    [] /= lists:flatten(
+            [node_repair_status_from_node(N) || N <- [node() | nodes()]]).
+
+
+node_repair_stop(Node, Reason) ->
+    erpc:call(Node, riak_core_vnode_manager, kill_repairs, [Reason]).

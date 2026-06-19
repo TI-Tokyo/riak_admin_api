@@ -485,6 +485,69 @@ NODE is the node to restart.
 > request will succeed but the node will not be restarted.
 
 
+## NodeRepairStatus
+**Permissions required**: cluster\_observer.
+### Parameters
+```
+{"nodes": NODES}
+```
+Report any ongoing repairs on NODES.
+
+### Response
+On success:
+```
+{
+   "result" : [
+      {
+         "node" : "dev1@127.0.0.1",
+         "status" : [
+            {
+               "idx" : "205523667749658222872393179600727299639115513856",
+               "mod" : "riak_kv_vnode",
+               "pid" : "<0.1787.0>"
+            },
+...
+         ]
+      },
+      {
+         "node" : "dev2@127.0.0.1",
+         "status" : []
+      },
+...
+   ]
+}
+```
+
+## NodeRepairStart
+**Permissions required**: cluster\_observer, cluster\_admin.
+### Parameters
+```
+{"node": NODE}
+```
+Initiate node repair on NODE. Node repair can only be started if no
+repairs are active on any node in the cluster.
+
+### Response
+On error,
+```
+{"error" : "Node exists with ongoing repairs"}
+```
+with status code 412.
+
+
+## NodeRepairStop
+**Permissions required**: cluster\_observer, cluster\_admin.
+### Parameters
+```
+{
+   "node" : NODE,
+   "reason" : REASON
+}
+```
+Stop node repair on NODE with REASON (a string, which will appear in
+console.log as `Killing all repairs: REASON`).
+
+
 # Cluster admin request status codes
 
 On success, all requests return 200. On error, the status code will be, depending on

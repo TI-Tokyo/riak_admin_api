@@ -32,7 +32,7 @@ process_request(Request) ->
     Res =
         case Request of
             #{
-                <<"action">> := <<"VnodeGetStatus">>,
+                <<"action">> := <<"VnodeStatus">>,
                 <<"params">> := #{
                     <<"node">> := Node_,
                     <<"preflists">> := PrefLists_

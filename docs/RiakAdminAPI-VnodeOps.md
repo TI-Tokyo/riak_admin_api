@@ -1,6 +1,6 @@
 # Vnode Operations
 
-## VnodeGetStatus
+## VnodeStatus
 **Permissions required**: cluster\_observer.
 
 ### Parameters
